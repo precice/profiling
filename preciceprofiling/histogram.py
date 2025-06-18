@@ -1,0 +1,58 @@
+from preciceprofiling.common import Run
+import matplotlib.pyplot as plt
+import polars as pl
+
+
+def histogramCommand(profilingfile, outfile, participant, event, rank, bins, unit="us"):
+    run = Run(profilingfile)
+    df = run.toDataFrame()
+
+    # Check user input
+    assert df.select(
+        pl.col("participant").is_in([participant]).any()
+    ).item(), f"Given participant {participant} doesn't exist."
+    assert df.select(
+        pl.col("eid").is_in([event]).any()
+    ).item(), f"Given event {event} doesn't exist."
+    if not rank is None:
+        assert df.select(
+            pl.col("rank").is_in([rank]).any()
+        ).item(), f"Given rank {rank} doesn't exist."
+
+    # Filter by participant and event
+    filter = (pl.col("participant") == participant) & (pl.col("eid") == event)
+    # Optionally filter by rank
+    if not rank is None:
+        filter = filter & (pl.col("rank") == rank)
+
+    # duration scaling factor
+    dur_factor = 1000 * ns_to_unit_factor(unit)
+
+    # Query durations
+    durations = df.filter(filter).select(pl.col("dur") * dur_factor)
+
+    ranks = df["rank"].unique()
+    rankDesc = (
+        "ranks: " + ",".join(map(str, ranks))
+        if len(ranks) < 5
+        else f"{len(ranks)} ranks"
+    )
+
+    fig, ax = plt.subplots(figsize=(14, 7), tight_layout=True)
+    ax.set_title(f'Histogram of event "{event}" on {participant} ({rankDesc})')
+    ax.set_xlabel(f"Duration [{unit}]")
+    ax.set_ylabel("Occurrence")
+    hist_data = ax.hist(durations, bins=bins, histtype="barstacked", align="mid")
+    ax.bar_label(hist_data[2])
+    binborders = hist_data[1]
+    ax.set_xticks(binborders, labels=[f"{d:,.2f}" for d in binborders], rotation=90)
+    ax.set_xlim(left=min(binborders), right=max(binborders))
+    ax.grid(axis="x")
+
+    if outfile:
+        print(f"Writing to {outfile}")
+        plt.savefig(outfile)
+    else:
+        plt.show()
+
+    return 0
