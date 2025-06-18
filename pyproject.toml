@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=41", "wheel", "setuptools-git-versioning"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name="precice-profiling"
+dynamic = [ "version" ]
+dependencies = [
+    "typing_extensions", "ujson", "polars >= 0.19.0", "matplotlib"
+]
+requires-python = ">=3.8"
+authors = [
+    { name = "The preCICE Developers",  email="info@precice.org"}
+]
+maintainers = [
+    { name = "Frédéric Simonis",  email="frederic.simonis@ipvs.uni-stuttgart.de"}
+]
+description="A tool for post-processing and analyzing preCICE profiling data."
+readme = "README.md"
+license= "MIT"
+license-files = [ "LICENSE" ]
+keywords = [ "preCICE", "visualization" ]
+classifiers=[
+"Development Status :: 4 - Beta",
+"Programming Language :: Python :: 3 :: Only",
+"Programming Language :: Python :: 3.8",
+"Topic :: Scientific/Engineering :: Visualization",
+"Topic :: Utilities",
+]
+
+[project.urls]
+Homepage = "https://precice.org"
+Documentation = "https://precice.org/tooling-performance-analysis"
+Repository = "https://github.com/precice/profiling.git"
+"Bug Tracker" = "https://github.com/precice/profiling/issues"
+
+[project.scripts]
+precice-profiling-post = "preciceprofiling.post:main"
+precice-profiling-merge = "preciceprofiling.merge:main"
+
+[tool.setuptools]
+packages=["preciceprofiling"]
+
+[tool.setuptools-git-versioning]
+enabled = true
+
+[tool.mypy]
+disable_error_code = "import-untyped"
