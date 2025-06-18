@@ -19,6 +19,10 @@ def makeExportParser(add_help: bool = True):
     return export
 
 
+def runExport(ns):
+    return exportCommand(ns.profilingfile, ns.output, ns.unit)
+
+
 def exportCommand(profilingfile, outfile, unit):
     run = Run(profilingfile)
     dataFields = run.allDataFields()

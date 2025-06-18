@@ -430,6 +430,10 @@ def sanitizeFiles(files):
     return filesToLoad
 
 
+def runMerge(ns):
+    return mergeCommand(ns.files, ns.output, not ns.no_align)
+
+
 def mergeCommand(files, outfile, align):
     resolved = detectFiles(files)
     sanitized = sanitizeFiles(resolved)
@@ -469,7 +473,7 @@ def makeMergeParser(add_help: bool = True):
 def main():
     parser = makeMergeParser()
     ns = parser.parse_args()
-    return (mergeCommand(ns.files, ns.output, not ns.no_align),)
+    return runMerge(ns)
 
 
 if __name__ == "__main__":

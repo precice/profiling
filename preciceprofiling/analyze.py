@@ -109,6 +109,12 @@ def printWide(df):
         )
 
 
+def runAnalyze(ns):
+    return analyzeCommand(
+        ns.profilingfile, ns.participant, ns.event, ns.output, ns.unit
+    )
+
+
 def analyzeCommand(profilingfile, participant, event, outfile=None, unit="us"):
     run = Run(profilingfile)
     df = run.toDataFrame()

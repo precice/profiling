@@ -40,6 +40,18 @@ def makeHistogramParser(add_help: bool = True):
     return histogram
 
 
+def runHistogram(ns):
+    return histogramCommand(
+        ns.profilingfile,
+        ns.output,
+        ns.participant,
+        ns.event,
+        ns.rank,
+        ns.bins,
+        ns.unit,
+    )
+
+
 def histogramCommand(profilingfile, outfile, participant, event, rank, bins, unit="us"):
     run = Run(profilingfile)
     df = run.toDataFrame()

@@ -3,10 +3,10 @@
 import argparse
 import sys
 
-from preciceprofiling.analyze import analyzeCommand, makeAnalyzeParser
-from preciceprofiling.export import exportCommand, makeExportParser
-from preciceprofiling.histogram import histogramCommand, makeHistogramParser
-from preciceprofiling.trace import traceCommand, makeTraceParser
+from preciceprofiling.analyze import runAnalyze, makeAnalyzeParser
+from preciceprofiling.export import runExport, makeExportParser
+from preciceprofiling.histogram import runHistogram, makeHistogramParser
+from preciceprofiling.trace import runTrace, makeTraceParser
 
 
 def main():
@@ -33,22 +33,10 @@ def main():
     args = parser.parse_args()
 
     dispatcher = {
-        "trace": lambda ns: traceCommand(
-            ns.profilingfile, ns.output, ns.rank, ns.limit
-        ),
-        "export": lambda ns: exportCommand(ns.profilingfile, ns.output, ns.unit),
-        "analyze": lambda ns: analyzeCommand(
-            ns.profilingfile, ns.participant, ns.event, ns.output, ns.unit
-        ),
-        "histogram": lambda ns: histogramCommand(
-            ns.profilingfile,
-            ns.output,
-            ns.participant,
-            ns.event,
-            ns.rank,
-            ns.bins,
-            ns.unit,
-        ),
+        "trace": runTrace,
+        "export": runExport,
+        "analyze": runAnalyze,
+        "histogram": runHistogram,
     }
 
     def showHelp(ns):

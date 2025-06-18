@@ -25,6 +25,10 @@ def makeTraceParser(add_help: bool = True):
     return trace
 
 
+def runTrace(ns):
+    return traceCommand(ns.profilingfile, ns.output, ns.rank, ns.limit)
+
+
 def traceCommand(profilingfile, outfile, rankfilter, limit):
     run = Run(profilingfile)
     selection = (
