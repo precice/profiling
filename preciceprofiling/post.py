@@ -3,17 +3,10 @@
 import argparse
 import sys
 
-from preciceprofiling.analyze import analyzeCommand
-from preciceprofiling.export import exportCommand
-from preciceprofiling.histogram import histogramCommand
-from preciceprofiling.trace import traceCommand
-
-from preciceprofiling.parsers import (
-    makeTraceParser,
-    makeExportParser,
-    makeAnalyzeParser,
-    makeHistogramParser,
-)
+from preciceprofiling.analyze import analyzeCommand, makeAnalyzeParser
+from preciceprofiling.export import exportCommand, makeExportParser
+from preciceprofiling.histogram import histogramCommand, makeHistogramParser
+from preciceprofiling.trace import traceCommand, makeTraceParser
 
 
 def main():

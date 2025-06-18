@@ -1,5 +1,29 @@
 from preciceprofiling.common import Run, ns_to_unit_factor
 import polars as pl
+from preciceprofiling.parsers import addInputArgument, addUnitArgument
+import argparse
+
+
+def makeAnalyzeParser(add_help: bool = True):
+    analyze_help = """Analyze profiling data of a given solver.
+    Event durations are displayed in the unit of choice.
+    Parallel solvers show events of the primary rank next to the secondary ranks spending the least and most time in advance of preCICE.
+    """
+    analyze = argparse.ArgumentParser(description=analyze_help, add_help=add_help)
+    analyze.add_argument("participant", type=str, help="The participant to analyze")
+    addInputArgument(analyze)
+    addUnitArgument(analyze)
+    analyze.add_argument(
+        "-e",
+        "--event",
+        nargs="?",
+        type=str,
+        default="advance",
+        help="The event used to determine the most expensive and cheapest rank.",
+    )
+    analyze.add_argument("-o", "--output", help="Write the result to CSV file")
+
+    return analyze
 
 
 def printWide(df):

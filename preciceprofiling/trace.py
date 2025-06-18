@@ -1,5 +1,28 @@
 from preciceprofiling.common import Run
 import ujson
+import argparse
+
+
+def makeTraceParser(add_help: bool = True):
+    trace_help = "Transform profiling to the Trace Event Format."
+    trace = argparse.ArgumentParser(description=trace_help, add_help=add_help)
+    trace.add_argument(
+        "profilingfile",
+        type=str,
+        nargs="?",
+        default="profiling.json",
+        help="The profiling file to process",
+    )
+    trace.add_argument(
+        "-o", "--output", default="trace.json", help="The resulting trace file"
+    )
+    trace.add_argument(
+        "-l", "--limit", type=int, metavar="n", help="Select the first n ranks"
+    )
+    trace.add_argument(
+        "-r", "--rank", type=int, nargs="*", help="Select individual ranks"
+    )
+    return trace
 
 
 def traceCommand(profilingfile, outfile, rankfilter, limit):

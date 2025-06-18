@@ -1,6 +1,43 @@
 from preciceprofiling.common import Run
 import matplotlib.pyplot as plt
 import polars as pl
+import argparse
+from preciceprofiling.parsers import addInputArgument, addUnitArgument
+
+
+def makeHistogramParser(add_help: bool = True):
+    histogram_help = """Plots the duration distribution of a single event of a given solver.
+    Event durations are displayed in the unit of choice.
+    """
+    histogram = argparse.ArgumentParser(description=histogram_help, add_help=add_help)
+    histogram.add_argument(
+        "-o",
+        "--output",
+        default=None,
+        help="Write to file instead of displaying the plot",
+    )
+    histogram.add_argument(
+        "-r", "--rank", type=int, default=None, help="Display only the given rank"
+    )
+
+    def try_int(s):
+        try:
+            return int(s)
+        except:
+            return s
+
+    histogram.add_argument(
+        "-b",
+        "--bins",
+        type=try_int,
+        default="fd",
+        help="Number of bins or strategy. Must be a valid argument to numpy.histogram_bin_edges",
+    )
+    histogram.add_argument("participant", type=str, help="The participant to analyze")
+    histogram.add_argument("event", type=str, help="The event to analyze")
+    addInputArgument(histogram)
+    addUnitArgument(histogram)
+    return histogram
 
 
 def histogramCommand(profilingfile, outfile, participant, event, rank, bins, unit="us"):
