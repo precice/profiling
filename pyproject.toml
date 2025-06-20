@@ -37,6 +37,10 @@ Repository = "https://github.com/precice/profiling.git"
 [project.scripts]
 precice-profiling-post = "preciceprofiling.post:main"
 precice-profiling-merge = "preciceprofiling.merge:main"
+precice-profiling-analyze = "preciceprofiling.analyze:main"
+precice-profiling-trace = "preciceprofiling.trace:main"
+precice-profiling-export = "preciceprofiling.export:main"
+precice-profiling-histogram = "preciceprofiling.histogram:main"
 
 [tool.setuptools]
 packages=["preciceprofiling"]

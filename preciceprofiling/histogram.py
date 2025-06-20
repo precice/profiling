@@ -2,6 +2,7 @@ from preciceprofiling.common import Run
 import matplotlib.pyplot as plt
 import polars as pl
 import argparse
+import sys
 from preciceprofiling.parsers import addInputArgument, addUnitArgument
 
 
@@ -105,3 +106,13 @@ def histogramCommand(profilingfile, outfile, participant, event, rank, bins, uni
         plt.show()
 
     return 0
+
+
+def main():
+    parser = makeHistogramParser()
+    ns = parser.parse_args()
+    return runHistogram(ns)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,6 +1,7 @@
 from preciceprofiling.common import Run
 import ujson
 import argparse
+import sys
 
 
 def makeTraceParser(add_help: bool = True):
@@ -41,3 +42,13 @@ def traceCommand(profilingfile, outfile, rankfilter, limit):
     with open(outfile, "w") as outfile:
         ujson.dump(traces, outfile)
     return 0
+
+
+def main():
+    parser = makeTraceParser()
+    ns = parser.parse_args()
+    return runTrace(ns)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

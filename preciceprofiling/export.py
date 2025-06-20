@@ -2,6 +2,7 @@ import csv
 from preciceprofiling.common import Run
 from preciceprofiling.parsers import addInputArgument, addUnitArgument
 import argparse
+import sys
 
 
 def makeExportParser(add_help: bool = True):
@@ -40,3 +41,13 @@ def exportCommand(profilingfile, outfile, unit):
         writer.writerow(fieldnames)
         writer.writerows(run.toExportList(unit, dataFields))
     return 0
+
+
+def main():
+    parser = makeExportParser()
+    ns = parser.parse_args()
+    return runExport(ns)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

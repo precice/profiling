@@ -2,6 +2,7 @@ from preciceprofiling.common import Run, ns_to_unit_factor
 import polars as pl
 from preciceprofiling.parsers import addInputArgument, addUnitArgument
 import argparse
+import sys
 
 
 def makeAnalyzeParser(add_help: bool = True):
@@ -214,3 +215,13 @@ def analyzeCommand(profilingfile, participant, event, outfile=None, unit="us"):
         joined.write_csv(outfile)
 
     return 0
+
+
+def main():
+    parser = makeAnalyzeParser()
+    ns = parser.parse_args()
+    return runAnalyze(ns)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
