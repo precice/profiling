@@ -2,12 +2,15 @@
 
 # Import the fastest jsons library available
 try:
-    import ujson as json
+    import orjson as json
 except ImportError:
     try:
-        import simplejson as json
+        import ujson as json
     except ImportError:
-        import json
+        try:
+            import simplejson as json
+        except ImportError:
+            import json
 
 import argparse
 import functools
@@ -243,7 +246,7 @@ def compressNames(events):
             for e in ranks["events"]
         )
     )
-    nameToId = {name: id for id, name in enumerate(allNames)}
+    nameToId = {name: str(id) for id, name in enumerate(allNames)}
 
     for p, ranks in events.items():
         for r, data in ranks.items():
@@ -301,7 +304,7 @@ def loadProfilingOutputs(filenames):
         name = json["meta"]["name"]
         rank = int(json["meta"]["rank"])
         unix_us = int(json["meta"]["unix_us"])
-        events.setdefault(name, {})[rank] = {
+        events.setdefault(name, {})[str(rank)] = {
             "meta": {
                 "name": name,
                 "rank": rank,
@@ -443,8 +446,10 @@ def mergeCommand(files, outfile, align):
         merged = alignEvents(merged)
 
     print(f"Writing to {outfile}")
-    with open(outfile, "w", newline="") as file:
-        json.dump(merged, file)
+    data = json.dumps(merged)
+    mode = "wb" if isinstance(data, bytes) else "w"
+    with open(outfile, mode) as file:
+        file.write(data)
 
     return 0
 

@@ -1,5 +1,5 @@
 from preciceprofiling.common import Run
-import ujson
+import orjson
 import argparse
 import sys
 
@@ -39,8 +39,8 @@ def traceCommand(profilingfile, outfile, rankfilter, limit):
     )
     traces = run.toTrace(selection)
     print(f"Writing to {outfile}")
-    with open(outfile, "w") as outfile:
-        ujson.dump(traces, outfile)
+    with open(outfile, "wb") as outfile:
+        outfile.write(orjson.dumps(traces))
     return 0
 
 

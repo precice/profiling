@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 # Import the currently fastest json library
-import ujson
+import orjson
 import datetime
 import functools
 import polars as pl
@@ -58,7 +58,7 @@ class Run:
         print(f"Reading events file {filename}")
 
         with open(filename, "r") as f:
-            content = ujson.load(f)
+            content = orjson.loads(f.read())
 
         if "file_version" not in content:
             warning(
