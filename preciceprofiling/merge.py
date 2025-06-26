@@ -246,7 +246,7 @@ def compressNames(events):
             for e in ranks["events"]
         )
     )
-    nameToId = {name: str(id) for id, name in enumerate(allNames)}
+    nameToId = {name: id for id, name in enumerate(allNames)}
 
     for p, ranks in events.items():
         for r, data in ranks.items():
@@ -446,7 +446,11 @@ def mergeCommand(files, outfile, align):
         merged = alignEvents(merged)
 
     print(f"Writing to {outfile}")
-    data = json.dumps(merged)
+    if json.__name__ == "orjson":
+        data = json.dumps(merged, option=json.OPT_NON_STR_KEYS)
+    else:
+        data = json.dumps(merged)
+
     mode = "wb" if isinstance(data, bytes) else "w"
     with open(outfile, mode) as file:
         file.write(data)
