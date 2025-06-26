@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://precice.org/schema/profiling/merged/v1.json",
+  "title": "preCICE merged profiling file",
+  "description": "Schema for the merged performance profiling data, emitted my precice-profiling-merge",
+  "type": "object",
+  "properties": {
+    "file_version": {
+      "type": "integer"
+    },
+    "eventDict": {
+      "type": "object",
+      "patternProperties": {
+        "[0-9]+": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "events": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/participant"
+      }
+    }
+  },
+  "required": [
+    "file_version",
+    "eventDict",
+    "events"
+  ],
+  "$defs": {
+    "rank": {
+      "type": "object",
+      "properties": {
+        "meta": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Name of the participant"
+            },
+            "rank": {
+              "type": "integer",
+              "description": "Rank of the participant"
+            },
+            "size": {
+              "type": "integer",
+              "description": "Size of the participant"
+            },
+            "unix_us": {
+              "type": "integer",
+              "description": "Unix timestamp in microseconds"
+            },
+            "tinit": {
+              "type": "string",
+              "description": "Initialization timestamp in ISO format"
+            }
+          },
+          "required": [
+            "name",
+            "rank",
+            "size",
+            "unix_us",
+            "tinit"
+          ]
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "eid": {
+                "type": "integer"
+              },
+              "ts": {
+                "type": "integer"
+              },
+              "dur": {
+                "type": "integer"
+              },
+              "data": {
+                "$ref": "#/$defs/data"
+                }
+              }
+            },
+            "required": [
+              "eid",
+              "ts",
+              "dur"
+            ]
+          }
+      },
+      "required": [
+        "meta",
+        "events"
+      ]
+    },
+    "participant": {
+      "type": "object",
+      "patternProperties": {
+        "[0-9]+": {
+          "$ref": "#/$defs/rank"
+        }
+      },
+      "additionalProperties": false
+    },
+    "data": {
+      "type": "object",
+      "patternProperties": {
+        ".+": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
