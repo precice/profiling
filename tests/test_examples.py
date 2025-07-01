@@ -1,8 +1,12 @@
 import pathlib
 import pytest
 import tempfile
-import subprocess
 import polars as pl
+
+from preciceprofiling.merge import mergeCommand
+from preciceprofiling.analyze import analyzeCommand
+from preciceprofiling.export import exportCommand
+from preciceprofiling.trace import traceCommand
 
 
 def get_cases():
@@ -11,17 +15,22 @@ def get_cases():
 
 
 def run_case(case: pathlib.Path, cwd: pathlib.Path):
+    profiling = cwd / "profiling.json"
+    export = cwd / "profiling.csv"
+    trace = cwd / "trace.json"
+    unit = "us"
+
     print("--- Merge")
-    subprocess.run(["precice-profiling-merge", str(case)], check=True, cwd=cwd)
-    assert (cwd / "profiling.json").exists()
+    assert mergeCommand([case], profiling, True) == 0
+    assert profiling.exists()
 
     print("--- Export")
-    subprocess.run(["precice-profiling-export"], check=True, cwd=cwd)
-    assert (cwd / "profiling.csv").exists()
+    assert exportCommand(profiling, export, unit) == 0
+    assert export.exists()
 
     print("--- Trace")
-    subprocess.run(["precice-profiling-trace"], check=True, cwd=cwd)
-    assert (cwd / "trace.json").exists()
+    assert traceCommand(profiling, trace, unit, None) == 0
+    assert trace.exists()
 
     participants = (
         pl.read_csv(cwd / "profiling.csv").get_column("participant").unique().to_list()
@@ -29,9 +38,7 @@ def run_case(case: pathlib.Path, cwd: pathlib.Path):
     for i, part in enumerate(participants):
         print(f"--- Analyze {part}")
         out = cwd / f"analyze-{i}.csv"
-        subprocess.run(
-            ["precice-profiling-analyze", "-o", str(out), part], check=True, cwd=cwd
-        )
+        assert analyzeCommand(profiling, part, "advance", out, unit) == 0
         assert out.exists()
 
 
