@@ -1,4 +1,3 @@
-import csv
 from preciceprofiling.common import Run
 from preciceprofiling.parsers import addInputArgument, addUnitArgument
 import argparse
@@ -26,20 +25,8 @@ def runExport(ns):
 
 def exportCommand(profilingfile, outfile, unit):
     run = Run(profilingfile)
-    dataFields = run.allDataFields()
-    fieldnames = [
-        "participant",
-        "rank",
-        "size",
-        "event",
-        "timestamp",
-        "duration",
-    ] + dataFields
     print(f"Writing to {outfile}")
-    with open(outfile, "w", newline="") as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(fieldnames)
-        writer.writerows(run.toExportList(unit, dataFields))
+    run.toExportDataFrame(unit).write_csv(outfile)
     return 0
 
 

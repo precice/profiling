@@ -156,9 +156,9 @@ class Run:
 
         def makeData(e):
             if "data" not in e:
-                return tuple("" for dname in dataNames)
+                return tuple(None for dname in dataNames)
 
-            return tuple(e["data"].get(dname, "") for dname in dataNames)
+            return tuple(e["data"].get(dname, None) for dname in dataNames)
 
         for rank in self.iterRanks():
             for e in rank.events:
@@ -174,17 +174,35 @@ class Run:
     def toDataFrame(self):
         import itertools
 
+        schema = [
+            ("participant", pl.Utf8),
+            ("rank", pl.Int32),
+            ("eid", pl.Utf8),
+            ("ts", pl.Int64),
+            ("dur", pl.Int64),
+        ]
+
         columns = ["participant", "rank", "eid", "ts", "dur"]
         df = pl.DataFrame(
             data=itertools.chain.from_iterable(
                 map(lambda r: r.toListOfTuples(self.eventLookup), self.iterRanks())
             ),
-            schema=[
-                ("participant", pl.Utf8),
-                ("rank", pl.Int32),
-                ("eid", pl.Utf8),
-                ("ts", pl.Int64),
-                ("dur", pl.Int64),
-            ],
+            schema=schema,
         ).with_columns([pl.col("ts").cast(pl.Datetime("us"))])
+        return df
+
+    def toExportDataFrame(self, unit):
+        dataFields = self.allDataFields()
+        schema = [
+            ("participant", pl.Utf8),
+            ("rank", pl.Int32),
+            ("size", pl.Int32),
+            ("eid", pl.Utf8),
+            ("ts", pl.Int64),
+            ("dur", pl.Int64),
+        ] + [(dn, pl.Int64) for dn in dataFields]
+        df = pl.DataFrame(
+            data=self.toExportList(unit, dataFields),
+            schema=schema,
+        )
         return df
