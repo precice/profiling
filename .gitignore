@@ -12,3 +12,8 @@
 
 # tox working dir
 /.tox/
+
+# output files
+profiling.json
+profiling.csv
+trace.json
