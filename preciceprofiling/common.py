@@ -1,10 +1,7 @@
 #! /usr/bin/env python3
 
-# Import the currently fastest json library
-import orjson
 import datetime
 import functools
-import polars as pl
 
 from preciceprofiling.merge import warning, MERGED_FILE_VERSION
 
@@ -55,9 +52,11 @@ class RankData:
 
 class Run:
     def __init__(self, filename):
+        import orjson
+
         print(f"Reading events file {filename}")
 
-        with open(filename, "r") as f:
+        with open(filename, "rb") as f:
             content = orjson.loads(f.read())
 
         if "file_version" not in content:
@@ -172,6 +171,7 @@ class Run:
                 ) + makeData(e)
 
     def toDataFrame(self):
+        import polars as pl
         import itertools
 
         columns = ["participant", "rank", "eid", "ts", "dur"]
