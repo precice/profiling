@@ -8,6 +8,8 @@ import polars as pl
 
 from preciceprofiling.merge import warning, MERGED_FILE_VERSION
 
+from typing import Literal
+
 
 def mergedDict(dict1, dict2):
     merged = dict1.copy()
@@ -16,7 +18,7 @@ def mergedDict(dict1, dict2):
 
 
 @functools.lru_cache
-def ns_to_unit_factor(unit):
+def ns_to_unit_factor(unit: Literal["ns", "us", "ms", "s", "m", "h"]) -> float:
     return {
         "ns": 1,
         "us": 1e-3,
@@ -93,7 +95,7 @@ class Run:
 
     def toTrace(self, selectRanks):
         if selectRanks:
-            print(f'Selected ranks: {",".join(map(str,sorted(selectRanks)))}')
+            print(f'Selected ranks: {",".join(map(str, sorted(selectRanks)))}')
 
         def filterop(rank):
             return True if not selectRanks else rank.rank in selectRanks
@@ -151,7 +153,7 @@ class Run:
             }
         )
 
-    def toExportList(self, unit, dataNames):
+    def toExportList(self, unit: Literal["ns", "us", "ms", "s", "m", "h"], dataNames):
         factor = ns_to_unit_factor(unit) * 1e3 if unit else 1
 
         def makeData(e):
@@ -191,7 +193,7 @@ class Run:
         ).with_columns([pl.col("ts").cast(pl.Datetime("us"))])
         return df
 
-    def toExportDataFrame(self, unit):
+    def toExportDataFrame(self, unit: Literal["ns", "us", "ms", "s", "m", "h"]):
         dataFields = self.allDataFields()
         schema = [
             ("participant", pl.Utf8),

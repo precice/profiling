@@ -1,4 +1,4 @@
-def addUnitArgument(parser):
+def addUnitArgument(parser) -> None:
     parser.add_argument(
         "-u",
         "--unit",
@@ -8,7 +8,7 @@ def addUnitArgument(parser):
     )
 
 
-def addInputArgument(parser):
+def addInputArgument(parser) -> None:
     parser.add_argument(
         "profilingfile",
         nargs="?",

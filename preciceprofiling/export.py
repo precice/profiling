@@ -3,8 +3,10 @@ from preciceprofiling.parsers import addInputArgument, addUnitArgument
 import argparse
 import sys
 
+from typing import Literal
 
-def makeExportParser(add_help: bool = True):
+
+def makeExportParser(add_help: bool = True) -> argparse.ArgumentParser:
     export_help = "Export the profiling data as a CSV file."
     export = argparse.ArgumentParser(description=export_help, add_help=add_help)
     addInputArgument(export)
@@ -19,18 +21,18 @@ def makeExportParser(add_help: bool = True):
     return export
 
 
-def runExport(ns):
+def runExport(ns) -> Literal[0]:
     return exportCommand(ns.profilingfile, ns.output, ns.unit)
 
 
-def exportCommand(profilingfile, outfile, unit):
+def exportCommand(profilingfile, outfile, unit) -> Literal[0]:
     run = Run(profilingfile)
     print(f"Writing to {outfile}")
     run.toExportDataFrame(unit).write_csv(outfile)
     return 0
 
 
-def main():
+def main() -> Literal[0]:
     parser = makeExportParser()
     ns = parser.parse_args()
     return runExport(ns)
