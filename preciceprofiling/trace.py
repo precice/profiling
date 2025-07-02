@@ -3,8 +3,10 @@ import orjson
 import argparse
 import sys
 
+from typing import Literal
 
-def makeTraceParser(add_help: bool = True):
+
+def makeTraceParser(add_help: bool = True) -> argparse.ArgumentParser:
     trace_help = "Transform profiling to the Trace Event Format."
     trace = argparse.ArgumentParser(description=trace_help, add_help=add_help)
     trace.add_argument(
@@ -26,11 +28,11 @@ def makeTraceParser(add_help: bool = True):
     return trace
 
 
-def runTrace(ns):
+def runTrace(ns) -> Literal[0]:
     return traceCommand(ns.profilingfile, ns.output, ns.rank, ns.limit)
 
 
-def traceCommand(profilingfile, outfile, rankfilter, limit):
+def traceCommand(profilingfile, outfile, rankfilter, limit: int) -> Literal[0]:
     run = Run(profilingfile)
     selection = (
         set()
@@ -44,7 +46,7 @@ def traceCommand(profilingfile, outfile, rankfilter, limit):
     return 0
 
 
-def main():
+def main() -> Literal[0]:
     parser = makeTraceParser()
     ns = parser.parse_args()
     return runTrace(ns)
