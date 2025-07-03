@@ -14,14 +14,16 @@ def get_cases():
     return [e for e in casesdir.iterdir() if e.is_dir()]
 
 
-def run_case(case: pathlib.Path, cwd: pathlib.Path):
+def run_case(case: pathlib.Path, cwd: pathlib.Path, useDir: bool):
     profiling = cwd / "profiling.json"
     export = cwd / "profiling.csv"
     trace = cwd / "trace.json"
     unit = "us"
 
+    mergeInputs = [case] if useDir else list(case.glob("*-*-*.json"))
+
     print("--- Merge")
-    assert mergeCommand([case], profiling, True) == 0
+    assert mergeCommand(mergeInputs, profiling, True) == 0
     assert profiling.exists()
 
     print("--- Export")
@@ -43,7 +45,7 @@ def run_case(case: pathlib.Path, cwd: pathlib.Path):
 
 
 def truncate_case_files(case: pathlib.Path, tmp: pathlib.Path):
-    for file in case.iterdir():
+    for file in case.glob("*-*-*.json"):
         print(f"Truncating {file}")
         content = file.read_text()
         truncated = content.removesuffix("\n").removesuffix("]}")
@@ -52,19 +54,21 @@ def truncate_case_files(case: pathlib.Path, tmp: pathlib.Path):
 
 
 @pytest.mark.parametrize("case", get_cases())
-def test_case(case: pathlib.Path):
+@pytest.mark.parametrize("useDir", [True, False])
+def test_case(case: pathlib.Path, useDir: bool):
     print(f"Testing case: {case}")
 
     with tempfile.TemporaryDirectory() as tmp:
         cwd = pathlib.Path(tmp)
-        run_case(case, cwd)
+        run_case(case, cwd, useDir)
 
 
 @pytest.mark.parametrize("case", get_cases())
-def test_truncated_case(case: pathlib.Path):
-    print(f"Testing case: {case}")
+@pytest.mark.parametrize("useDir", [True, False])
+def test_truncated_case(case: pathlib.Path, useDir: bool):
+    print(f'Testing case: {case} {"dir" if useDir else "files"}')
 
     with tempfile.TemporaryDirectory() as tmp:
         cwd = pathlib.Path(tmp)
         truncate_case_files(case, cwd)
-        run_case(cwd, cwd)
+        run_case(cwd, cwd, useDir)
