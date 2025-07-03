@@ -291,7 +291,7 @@ def loadProfilingOutputs(filenames: list[pathlib.Path]):
         name = json["meta"]["name"]
         rank = int(json["meta"]["rank"])
         unix_us = int(json["meta"]["unix_us"])
-        events.setdefault(name, {})[str(rank)] = {
+        events.setdefault(name, {})[rank] = {
             "meta": {
                 "name": name,
                 "rank": rank,
