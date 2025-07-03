@@ -330,27 +330,12 @@ def detectFiles(files: list[pathlib.Path]):
             resolved.append(path)
             continue
         if path.is_dir():
-            candidates = [
-                ".",
-                "..",
-                "../..",
-            ]
-            found = False
-            for candidate in candidates:
-                dir = path / candidate
-                if not dir.is_dir():
-                    continue
-                detected = searchDir(dir)
-                if len(detected) == 0:
-                    continue
+            detected = searchDir(path)
+            if len(detected) == 0:
+                print(f"Nothing found in {path}")
+            else:
                 print(f"Found {len(detected)} files in {path}")
                 resolved += detected
-                found = True
-                break
-
-            if not found:
-                print(f"Nothing found in {path}")
-
         else:
             print(f'Cannot interpret "{path}"')
 
