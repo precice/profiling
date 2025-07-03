@@ -13,7 +13,6 @@ except ImportError:
             import json
 
 import argparse
-import functools
 import sys
 from collections import namedtuple
 import pathlib
@@ -48,18 +47,6 @@ def readRobust(filename: pathlib.Path):
         except:
             warning("Unable to load critically damaged file.", filename)
             return {}  # give up
-
-
-@functools.lru_cache
-def ns_to_unit_factor(unit):
-    return {
-        "ns": 1,
-        "us": 1e-3,
-        "ms": 1e-6,
-        "s": 1e-9,
-        "m": 1e-9 / 60,
-        "h": 1e-9 / 3600,
-    }[unit]
 
 
 def alignEvents(events):
