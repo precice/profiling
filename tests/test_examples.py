@@ -31,7 +31,7 @@ def run_case(case: pathlib.Path, cwd: pathlib.Path, useDir: bool):
     assert export.exists()
 
     print("--- Trace")
-    assert traceCommand(profiling, trace, unit, None) == 0
+    assert traceCommand(profiling, trace, unit, None, False) == 0
     assert trace.exists()
 
     participants = (
