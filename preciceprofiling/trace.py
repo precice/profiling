@@ -2,6 +2,8 @@ from preciceprofiling.common import Run
 import orjson
 import argparse
 import sys
+import pathlib
+from preciceprofiling.perfetto import open_in_perfetto
 
 
 def makeTraceParser(add_help: bool = True):
@@ -15,7 +17,17 @@ def makeTraceParser(add_help: bool = True):
         help="The profiling file to process",
     )
     trace.add_argument(
-        "-o", "--output", default="trace.json", help="The resulting trace file"
+        "-o",
+        "--output",
+        default="trace.json",
+        type=pathlib.Path,
+        help="The resulting trace file",
+    )
+    trace.add_argument(
+        "-w",
+        "--web",
+        action="store_true",
+        help="Open resulting trace in ui.perfetto.dev",
     )
     trace.add_argument(
         "-l", "--limit", type=int, metavar="n", help="Select the first n ranks"
@@ -27,10 +39,10 @@ def makeTraceParser(add_help: bool = True):
 
 
 def runTrace(ns):
-    return traceCommand(ns.profilingfile, ns.output, ns.rank, ns.limit)
+    return traceCommand(ns.profilingfile, ns.output, ns.rank, ns.limit, ns.web)
 
 
-def traceCommand(profilingfile, outfile, rankfilter, limit):
+def traceCommand(profilingfile, outfile, rankfilter, limit, web):
     run = Run(profilingfile)
     selection = (
         set()
@@ -39,8 +51,10 @@ def traceCommand(profilingfile, outfile, rankfilter, limit):
     )
     traces = run.toTrace(selection)
     print(f"Writing to {outfile}")
-    with open(outfile, "wb") as outfile:
-        outfile.write(orjson.dumps(traces))
+    outfile.write_bytes(orjson.dumps(traces))
+
+    if web:
+        open_in_perfetto(outfile)
     return 0
 
 
