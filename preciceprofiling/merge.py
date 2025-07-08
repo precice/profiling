@@ -36,12 +36,12 @@ def warning(message, filename=None):
 
 
 def readRobust(filename: pathlib.Path):
-    content = filename.read_text()
+    content = filename.read_bytes()
     try:
         return json.loads(content)  # try direct
     except:
         warning("File damaged. Attempting to terminate truncated event file.", filename)
-        content += "]}"
+        content += b"]}"
         try:
             return json.loads(content)  # try terminated
         except:
