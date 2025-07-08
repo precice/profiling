@@ -35,18 +35,40 @@ def warning(message, filename=None):
     print(f"{prefix}\033[33mwarning:\033[0m {message}")
 
 
-def readRobust(filename: pathlib.Path):
-    content = filename.read_bytes()
-    try:
-        return json.loads(content)  # try direct
-    except:
-        warning("File damaged. Attempting to terminate truncated event file.", filename)
-        content += b"]}"
-        try:
-            return json.loads(content)  # try terminated
-        except:
-            warning("Unable to load critically damaged file.", filename)
-            return {}  # give up
+NameRecord = namedtuple("NameRecord", ["et", "eid", "en"])
+StartRecord = namedtuple("StartRecord", ["et", "eid", "ts"])
+StopRecord = namedtuple("StopRecord", ["et", "eid", "ts"])
+DataRecord = namedtuple("DataRecord", ["et", "eid", "ts", "dn", "dv"])
+
+
+def expand(s: str):
+    parts = s[1:].rstrip().split(":")
+    match s[0]:
+        case "N":
+            eid, name = parts
+            return NameRecord("n", int(eid), name)
+        case "B":
+            eid, ts = map(int, parts)
+            return StartRecord("b", eid, ts)
+        case "E":
+            eid, ts = map(int, parts)
+            return StopRecord("e", eid, ts)
+        case "D":
+            eid, ts, dn, dv = map(int, parts)
+            return DataRecord("d", eid, ts, dn, dv)
+    assert False
+
+
+def readRank(filename: pathlib.Path):
+    from io import StringIO
+
+    lines = StringIO(filename.read_text())
+    meta = json.loads(next(lines))
+    events = [expand(line) for line in lines]
+    return {
+        "meta": meta,
+        "events": events,
+    }
 
 
 def alignEvents(events):
@@ -143,26 +165,28 @@ def alignEvents(events):
     return events
 
 
-def groupEvents(events: [dict], initTime: int):
+def groupEvents(events: [tuple], initTime: int):
 
     # Expands event names
     def namedEvents():
-        nameMap = {int(e["eid"]): e["en"] for e in events if e["et"] == "n"}
+        nameMap = {e.eid: e.en for e in events if e.et == "n"}
         for e in events:
-            type = e["et"]
-            if type != "n":
-                e["eid"] = nameMap[e["eid"]]
-                if type == "d":
-                    e["dn"] = nameMap[e["dn"]]
-                yield e
+            match et := e.et:
+                case "b" | "e":
+                    yield et, {"eid": nameMap[e.eid], "ts": e.ts}
+                case "d":
+                    yield et, {
+                        "eid": nameMap[e.eid],
+                        "ts": e.ts,
+                        "dn": nameMap[e.dn],
+                        "dv": e.dv,
+                    }
 
     completed = []
     active = {}  # name to event data
     stack = []
 
-    for event in namedEvents():
-        type = event["et"]
-
+    for type, event in namedEvents():
         name: str = event["eid"]
         assert isinstance(name, str)
 
@@ -188,7 +212,6 @@ def groupEvents(events: [dict], initTime: int):
                 active.pop(name)
                 begin["dur"] = int(event["ts"]) - begin["ts"]
                 begin["ts"] = int(begin["ts"]) + initTime
-                begin.pop("et")
                 completed.append(begin)
                 if name != "_GLOBAL":
                     assert (
@@ -251,7 +274,7 @@ def loadProfilingOutputs(filenames: list[pathlib.Path]):
     print("Loading event files")
     events = {}
     for fn in filenames:
-        json = readRobust(fn)
+        json = readRank(fn)
 
         # General checks
         if not json:
@@ -311,10 +334,10 @@ def detectFiles(files: list[pathlib.Path]):
         assert directory.is_dir()
         import re
 
-        nameMatcher = r".+-\d+-\d+.json"
+        nameMatcher = r".+-\d+-\d+.txt"
         return [
             candidate
-            for candidate in path.rglob("**/*.json")
+            for candidate in path.rglob("**/*.txt")
             if re.fullmatch(nameMatcher, candidate.name)
         ]
 
@@ -346,7 +369,7 @@ def findFilesOfLatestRun(name, sizes):
     for size, ranks in sizes.items():
         assert len(ranks) > 0
         example = next(iter(ranks.values()))  # Get some file of this run
-        timestamp = int(readRobust(example)["meta"]["unix_us"])
+        timestamp = int(readRank(example)["meta"]["unix_us"])
         timestamps.append((size, timestamp))
 
     # Find oldest size of newest timestamps
