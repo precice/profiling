@@ -249,8 +249,8 @@ def compressNames(events):
 def loadProfilingOutputs(filenames: list[pathlib.Path]):
     # Load all jsons
     print("Loading event files")
-    jsons = []
-    for i, fn in enumerate(filenames):
+    events = {}
+    for fn in filenames:
         json = readRobust(fn)
 
         # General checks
@@ -278,16 +278,6 @@ def loadProfilingOutputs(filenames: list[pathlib.Path]):
                     fn,
                 )
 
-        jsons.append(json)
-
-    if not jsons:
-        print("No files loaded")
-        sys.exit(1)
-
-    # Grouping events
-    print("Grouping events")
-    events = {}
-    for i, json in enumerate(jsons):
         name = json["meta"]["name"]
         rank = int(json["meta"]["rank"])
         unix_us = int(json["meta"]["unix_us"])
@@ -301,6 +291,10 @@ def loadProfilingOutputs(filenames: list[pathlib.Path]):
             },
             "events": groupEvents(json["events"], unix_us),
         }
+
+    if not events:
+        print("No files loaded")
+        sys.exit(1)
 
     print("Compressing names")
     globalNameMap = compressNames(events)
