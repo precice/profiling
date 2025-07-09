@@ -145,104 +145,96 @@ def alignEvents(events):
 
 def groupEvents(events: [dict], initTime: int):
 
-    # Expands event names
-    def namedEvents():
-        nameMap = {int(e["eid"]): e["en"] for e in events if e["et"] == "n"}
-        for e in events:
-            type = e["et"]
-            if type != "n":
-                e["eid"] = nameMap[e["eid"]]
-                if type == "d":
-                    e["dn"] = nameMap[e["dn"]]
-                yield e
+    nameMap = {int(e["eid"]): e["en"] for e in events if e["et"] == "n"}
 
-    completed = []
-    active = {}  # name to event data
-    stack = []
+    completed = []  # completed events
+    active = []  # stack of active events
+    stack = []  # stack of eids
 
-    for event in namedEvents():
+    for event in events:
         type = event["et"]
 
-        name: str = event["eid"]
-        assert isinstance(name, str)
+        eid: int = event["eid"]
+        assert isinstance(eid, int)
 
         # Handle event starts
         if type == "b":
-            # assert(name not in active.keys())
-            if name in active.keys():
-                print(f"Ignoring start of active event {name}")
-            else:
-                event["ts"] = int(event["ts"])
-                fullName = "/".join(stack + [name])
-                event["eid"] = fullName
-                active[name] = event
-                if name != "_GLOBAL":
-                    stack.append(name)
+            stack.append(eid)
+            event["ts"] = int(event["ts"])
+            event["eid"] = tuple(stack)  # all eids that make up the name
+            active.append(event)
         # Handle event stops
         elif type == "e":
-            # assert(name in active.keys())
-            if name not in active.keys():
-                print(f"Ignoring end of inactive event {name}")
-            else:
-                begin = active[name]
-                active.pop(name)
-                begin["dur"] = int(event["ts"]) - begin["ts"]
-                begin["ts"] = int(begin["ts"]) + initTime
-                begin.pop("et")
-                completed.append(begin)
-                if name != "_GLOBAL":
-                    assert (
-                        stack[-1] == name
-                    ), f"Expected to end event {name} but the currently active event is {stack[-1]}. Note that events need to follow a strict nesting and overlapping starts/stops are not permitted."
-                    stack.pop()
+            assert (
+                eid == active[-1]["eid"][-1]
+            ), f"end of inactive event {nameMap[eid]}, found {nameMap[active[-1]['eid'][-1]]}"
+            begin = active.pop()
+            begin["dur"] = int(event["ts"]) - begin["ts"]
+            begin["ts"] = int(begin["ts"]) + initTime
+            begin.pop("et")
+            completed.append(begin)
+            assert (
+                stack[-1] == eid
+            ), f"Expected to end event {eid} but the currently active event is {nameMap[stack[-1]]}. Note that events need to follow a strict nesting and overlapping starts/stops are not permitted."
+            stack.pop()
         # Handle event data
         elif type == "d":
-            if name not in active.keys():
-                print(f"Dropping data event {name} as event isn't yet known.")
-            else:
-                d = active[name].get("data", {})
-                dname = event["dn"]
-                assert isinstance(dname, str)
-                d[dname] = int(event["dv"])
-                active[name]["data"] = d
+            for e in reversed(active):
+                if e["eid"] == eid:
+                    d = active[eid].get("data", {})
+                    dname = nameMap[event["dn"]]
+                    assert isinstance(dname, str)
+                    d[dname] = int(event["dv"])
+                    active[eid]["data"] = d
+                    break
 
     # Handle leftover events in case of a truncated input file
     if active:
         lastTS = min(map(lambda e: e["ts"] + e["dur"], completed))
         for event in active.values():
-            name = event["eid"]  # This is a global id
-            print(f"Truncating event without end {name}")
-            begin = active[name]
+            eid = event["eid"]  # This is a global id
+            print(f"Truncating event without end {eid}")
+            begin = active[eid]
             begin["ts"] = int(begin["ts"]) + initTime
             begin["dur"] = lastTS - begin["ts"]
             begin.pop("et")
             completed.append(begin)
 
-    assert all((isinstance(e["eid"], str) for e in completed))
+    assert not active
 
-    return sorted(completed, key=lambda e: e["ts"])
+    assert all((isinstance(e["eid"], tuple) for e in completed))
+
+    return nameMap, sorted(completed, key=lambda e: e["ts"])
 
 
 def compressNames(events):
-    allNames = set(
-        (
-            e["eid"]
-            for participants in events.values()
-            for ranks in participants.values()
-            for rank in ranks.values()
-            for e in ranks["events"]
-        )
-    )
-    nameToId = {name: id for id, name in enumerate(allNames)}
+    globalNames = {}  # name to geid
+    for pname, ranks in events.items():
+        for ranks, rankdata in ranks.items():
+            assert "events" in rankdata
+            assert "meta" in rankdata
+            rankNames = rankdata.pop("nameMap")
+            rankToGlobal = {}
 
-    for p, ranks in events.items():
-        for r, data in ranks.items():
-            for e in data["events"]:
-                name = e["eid"]
-                assert isinstance(name, str)
-                e["eid"] = nameToId[name]
+            for e in rankdata["events"]:
+                eids = e["eid"]
+                geid = None
+                if ret := rankToGlobal.get(eids):
+                    # already seen
+                    geid = ret
+                else:
+                    name = "/".join(map(rankNames.get, eids))
+                    if ret := globalNames.get(name):
+                        # name exists in global DB
+                        geid = ret
+                    else:
+                        geid = len(globalNames)
+                        globalNames[name] = geid
+                    # update local cache
+                    rankToGlobal[eids] = geid
+                e["eid"] = geid
 
-    idToName = dict(zip(nameToId.values(), nameToId.keys()))
+    idToName = dict(zip(globalNames.values(), globalNames.keys()))
     return idToName
 
 
@@ -281,6 +273,7 @@ def loadProfilingOutputs(filenames: list[pathlib.Path]):
         name = json["meta"]["name"]
         rank = int(json["meta"]["rank"])
         unix_us = int(json["meta"]["unix_us"])
+        nameMap, groupedEvents = groupEvents(json["events"], unix_us)
         events.setdefault(name, {})[rank] = {
             "meta": {
                 "name": name,
@@ -289,7 +282,8 @@ def loadProfilingOutputs(filenames: list[pathlib.Path]):
                 "unix_us": unix_us,
                 "tinit": json["meta"]["tinit"],
             },
-            "events": groupEvents(json["events"], unix_us),
+            "events": groupedEvents,
+            "nameMap": nameMap,
         }
 
     if not events:
