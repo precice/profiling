@@ -60,15 +60,13 @@ def expand(s: str):
 
 
 def readRank(filename: pathlib.Path):
-    from io import StringIO
-
-    lines = StringIO(filename.read_text())
-    meta = json.loads(next(lines))
-    events = [expand(line) for line in lines]
-    return {
-        "meta": meta,
-        "events": events,
-    }
+    with filename.open("r") as file:
+        meta = json.loads(file.readline())
+        events = [expand(line) for line in file]
+        return {
+            "meta": meta,
+            "events": events,
+        }
 
 
 def alignEvents(events):
