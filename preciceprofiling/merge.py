@@ -69,6 +69,11 @@ def readRank(filename: pathlib.Path):
         }
 
 
+def readTimestamp(filename: pathlib.Path):
+    with filename.open("r") as file:
+        return int(json.loads(file.readline())["unix_us"])
+
+
 def alignEvents(events):
     """Aligns passed events of multiple ranks and or participants.
     All ranks of a participant align at initialization, ensured by a barrier in preCICE.
@@ -367,7 +372,7 @@ def findFilesOfLatestRun(name, sizes):
     for size, ranks in sizes.items():
         assert len(ranks) > 0
         example = next(iter(ranks.values()))  # Get some file of this run
-        timestamp = int(readRank(example)["meta"]["unix_us"])
+        timestamp = readTimestamp(example)
         timestamps.append((size, timestamp))
 
     # Find oldest size of newest timestamps
