@@ -35,7 +35,7 @@ def warning(message, filename=None):
     print(f"{prefix}\033[33mwarning:\033[0m {message}")
 
 
-def readRobust(filename: pathlib.Path):
+def readJSON(filename: pathlib.Path):
     assert filename.suffix == ".json"
     content = filename.read_text()
     try:
@@ -52,7 +52,7 @@ def readRobust(filename: pathlib.Path):
 
 def readTimestamp(filename: pathlib.Path):
     if filename.suffix == ".json":
-        meta = readRobust(filename)["meta"]
+        meta = readJSON(filename)["meta"]
         return int(meta["unix_us"])
 
     assert filename.suffix == ".txt"
@@ -263,7 +263,7 @@ def loadProfilingOutputs(filenames: list[pathlib.Path]):
     print("Loading event files")
     jsons = []
     for i, fn in enumerate(filenames):
-        json = readRobust(fn)
+        json = readJSON(fn)
 
         # General checks
         if not json:
