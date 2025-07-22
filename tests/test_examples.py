@@ -14,13 +14,21 @@ def get_cases():
     return [e for e in casesdir.iterdir() if e.is_dir()]
 
 
+def get_json_cases():
+    return [case for case in get_cases() if case.name.endswith("-json")]
+
+
 def run_case(case: pathlib.Path, cwd: pathlib.Path, useDir: bool):
     profiling = cwd / "profiling.json"
     export = cwd / "profiling.csv"
     trace = cwd / "trace.json"
     unit = "us"
 
-    mergeInputs = [case] if useDir else list(case.glob("*-*-*.json"))
+    mergeInputs = (
+        [case]
+        if useDir
+        else list(case.glob("*-*-*.json")) + list(case.glob("*-*-*.txt"))
+    )
 
     print("--- Merge")
     assert mergeCommand(mergeInputs, profiling, True) == 0
@@ -63,7 +71,7 @@ def test_case(case: pathlib.Path, useDir: bool):
         run_case(case, cwd, useDir)
 
 
-@pytest.mark.parametrize("case", get_cases())
+@pytest.mark.parametrize("case", get_json_cases())
 @pytest.mark.parametrize("useDir", [True, False])
 def test_truncated_case(case: pathlib.Path, useDir: bool):
     print(f'Testing case: {case} {"dir" if useDir else "files"}')
