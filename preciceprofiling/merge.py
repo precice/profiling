@@ -50,6 +50,34 @@ def readJSON(filename: pathlib.Path):
             return {}  # give up
 
 
+def expandTXTRecord(s: str):
+    parts = s[1:].rstrip().split(":")
+    match s[0]:
+        case "N":
+            eid, name = int(parts[0]), parts[1]
+            return {"et": "n", "eid": eid, "en": name}
+        case "B":
+            eid, ts = map(int, parts)
+            return {"et": "b", "eid": eid, "ts": ts}
+        case "E":
+            eid, ts = map(int, parts)
+            return {"et": "e", "eid": eid, "ts": ts}
+        case "D":
+            eid, ts, dn, dv = map(int, parts)
+            return {"et": "d", "eid": eid, "ts": ts, "dn": dn, "dv": dv}
+    assert False
+
+
+def readTXT(filename: pathlib.Path):
+    with filename.open("r") as file:
+        meta = json.loads(file.readline())
+        events = [expandTXTRecord(line) for line in file]
+        return {
+            "meta": meta,
+            "events": events,
+        }
+
+
 def readTimestamp(filename: pathlib.Path):
     if filename.suffix == ".json":
         meta = readJSON(filename)["meta"]
