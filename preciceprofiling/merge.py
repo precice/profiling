@@ -357,10 +357,11 @@ def detectFiles(files: list[pathlib.Path]):
         assert directory.is_dir()
         import re
 
-        nameMatcher = r".+-\d+-\d+.json"
+        nameMatcher = r".+-\d+-\d+.(json|txt)"
         return [
             candidate
-            for candidate in path.rglob("**/*.json")
+            for pattern in ("**/*.json", "**/*.txt")
+            for candidate in path.rglob(pattern)
             if re.fullmatch(nameMatcher, candidate.name)
         ]
 
