@@ -291,7 +291,7 @@ def loadProfilingOutputs(filenames: list[pathlib.Path]):
     print("Loading event files")
     jsons = []
     for i, fn in enumerate(filenames):
-        json = readJSON(fn)
+        json = readJSON(fn) if fn.suffix == ".json" else readTXT(fn)
 
         # General checks
         if not json:
