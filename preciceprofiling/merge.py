@@ -36,6 +36,7 @@ def warning(message, filename=None):
 
 
 def readRobust(filename: pathlib.Path):
+    assert filename.suffix == ".json"
     content = filename.read_text()
     try:
         return json.loads(content)  # try direct
