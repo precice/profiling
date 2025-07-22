@@ -51,9 +51,14 @@ def readRobust(filename: pathlib.Path):
 
 
 def readTimestamp(filename: pathlib.Path):
-    assert filename.suffix == ".json"
-    meta = readRobust(filename)["meta"]
-    return int(meta["unix_us"])
+    if filename.suffix == ".json":
+        meta = readRobust(filename)["meta"]
+        return int(meta["unix_us"])
+
+    assert filename.suffix == ".txt"
+    with filename.open("rb") as file:
+        meta = json.loads(file.readline())
+        return int(meta["unix_us"])
 
 
 def alignEvents(events):
