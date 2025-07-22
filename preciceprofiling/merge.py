@@ -69,9 +69,9 @@ def expandTXTRecord(s: str):
 
 
 def readTXT(filename: pathlib.Path):
-    with filename.open("r") as file:
+    with filename.open("rb") as file:
         meta = json.loads(file.readline())
-        events = [expandTXTRecord(line) for line in file]
+        events = [expandTXTRecord(line.decode()) for line in file]
         return {
             "meta": meta,
             "events": events,
