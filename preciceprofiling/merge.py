@@ -315,6 +315,11 @@ def loadProfilingOutputs(filenames: list[pathlib.Path]):
                     "The file doesn't contain a version (preCICE version v3.2 or earlier) and may be incompatible.",
                     fn,
                 )
+            elif version == 1:
+                warning(
+                    f"The file uses development version 1, upgrading to a newer preCICE version is highly recommended.",
+                    fn,
+                )
             elif version != RUN_FILE_VERSION:
                 warning(
                     f"The file uses version {version}, which doesn't match the expected version {RUN_FILE_VERSION} and may be incompatible.",
