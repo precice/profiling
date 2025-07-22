@@ -420,9 +420,20 @@ def groupRuns(files: list[pathlib.Path]):
     for n, r, s, fn in pieces:
         rankMap = map.setdefault(n, {}).setdefault(s, {})
         if r in rankMap:
-            warning(f"Ignored due to conflict with '{rankMap[r]}'", fn)
+            existing = rankMap[r]
+            if existing.suffix == ".txt":
+                warning(
+                    f"Ignored new .json due to conflict with existing .txt '{existing}'",
+                    fn,
+                )
+            else:
+                warning(
+                    f"Newer .txt replaces previously found .json file '{existing}'", fn
+                )
+                rankMap.update({r: fn})
         else:
             rankMap.update({r: fn})
+
     return map
 
 
