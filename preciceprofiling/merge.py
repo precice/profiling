@@ -300,9 +300,9 @@ def loadProfilingOutputs(con: sqlite3.Connection, filenames: list[pathlib.Path])
     cur = createProfilingDB(con)
 
     # Load all jsons
-    print("Loading event files")
-    jsons = []
-    for i, fn in enumerate(filenames):
+    print(f"Loading {len(filenames)} event files")
+    for fn in filenames:
+        print(f"Loading {fn}")
         json = readJSON(fn) if fn.suffix == ".json" else readTXT(fn)
 
         # General checks
@@ -335,15 +335,7 @@ def loadProfilingOutputs(con: sqlite3.Connection, filenames: list[pathlib.Path])
                     fn,
                 )
 
-        jsons.append(json)
-
-    if not jsons:
-        print("No files loaded")
-        sys.exit(1)
-
-    # Grouping events
-    print("Grouping events")
-    for json in jsons:
+        # Grouping events
         name = json["meta"]["name"]
         rank = int(json["meta"]["rank"])
         size = int(json["meta"]["size"])
@@ -351,7 +343,9 @@ def loadProfilingOutputs(con: sqlite3.Connection, filenames: list[pathlib.Path])
         pid = addOrFetchParticipant(cur, name, size)
 
         unix_us = int(json["meta"]["unix_us"])
+        print(f"Processing {fn}")
         groupEvents(cur, pid, rank, json["events"], unix_us),
+        del json
 
 
 def detectFiles(files: list[pathlib.Path]):
