@@ -115,10 +115,17 @@ class Run:
     def participants(self):
         return [name for (name,) in self._cur.execute("SELECT name FROM participants")]
 
-    def toDataFrame(self, participant=None):
+    def events(self):
+        return [name for (name,) in self._cur.execute("SELECT name FROM names")]
+
+    def toDataFrame(self, participant=None, event=None):
         query = "SELECT * FROM full_events"
-        if participant:
+        if participant and event:
+            query += f" WHERE participant = '{participant}' and event = '{event}'"
+        elif participant:
             query += f" WHERE participant = '{participant}'"
+        elif event:
+            query += f" WHERE event = '{event}'"
 
         return (
             pl.read_database(

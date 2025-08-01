@@ -1,4 +1,4 @@
-from preciceprofiling.common import Run
+from preciceprofiling.common import Run, ns_to_unit_factor
 import matplotlib.pyplot as plt
 import polars as pl
 import argparse
@@ -55,15 +55,15 @@ def runHistogram(ns):
 
 def histogramCommand(profilingfile, outfile, participant, event, rank, bins, unit="us"):
     run = Run(profilingfile)
-    df = run.toDataFrame()
 
     # Check user input
-    assert df.select(
-        pl.col("participant").is_in([participant]).any()
-    ).item(), f"Given participant {participant} doesn't exist."
-    assert df.select(
-        pl.col("eid").is_in([event]).any()
-    ).item(), f"Given event {event} doesn't exist."
+    assert (
+        participant in run.participants()
+    ), f"Given participant {participant} doesn't exist."
+    assert event in run.events(), f"Given event {event} doesn't exist."
+
+    df = run.toDataFrame(participant=participant, event=event)
+
     if not rank is None:
         assert df.select(
             pl.col("rank").is_in([rank]).any()
