@@ -28,55 +28,12 @@ def ns_to_unit_factor(unit):
     }[unit]
 
 
-class RankData:
-    def __init__(self, data):
-        meta = data["meta"]
-        self.name = meta["name"]
-        self.rank = meta["rank"]
-        self.size = meta["size"]
-        self.unix_us = meta["unix_us"]
-        self.tinit = meta["tinit"]
-
-        self.events = data["events"]
-
-    @property
-    def type(self):
-        return "Primary (0)" if self.rank == 0 else f"Secondary ({self.rank})"
-
-    def toListOfTuples(self, eventLookup):
-        for e in self.events:
-            yield (
-                self.name,
-                self.rank,
-                eventLookup[e["eid"]],
-                int(e["ts"]),
-                int(e["dur"]),
-            )
-
-
 class Run:
     def __init__(self, filename):
         print(f"Reading events file {filename}")
 
         self._con = sqlite3.connect(filename)
         self._cur = self._con.cursor()
-
-    def iterRanks(self):
-        for pranks in self.data.values():
-            for d in sorted(
-                pranks.values(), key=lambda data: int(data["meta"]["rank"])
-            ):
-                yield RankData(d)
-
-    def iterParticipant(self, name):
-        for d in self.data[name].values():
-            yield RankData(d)
-
-    def participants(self):
-        return self.data.keys()
-
-    def lookupEvent(self, id):
-        return self.eventLookup[int(id)]
 
     def toTrace(self, selectRanks):
 
