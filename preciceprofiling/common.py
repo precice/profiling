@@ -112,11 +112,17 @@ class Run:
         for p, r, s, n, ts, dur, data in self._cur.execute("SELECT * FROM full_events"):
             yield (p, r, s, n, ts, dur * factor) + makeData(data)
 
-    def toDataFrame(self):
+    def participants(self):
+        return [name for (name,) in self._cur.execute("SELECT name FROM participants")]
+
+    def toDataFrame(self, participant=None):
+        query = "SELECT * FROM full_events"
+        if participant:
+            query += f" WHERE participant = '{participant}'"
 
         return (
             pl.read_database(
-                query="SELECT * FROM full_events",
+                query=query,
                 connection=self._cur,
             )
             .with_columns([pl.col("ts").cast(pl.Datetime("us"))])
