@@ -477,7 +477,7 @@ def makeMergeParser(add_help: bool = True):
         type=pathlib.Path,
         nargs="*",
         help="The profiling files to process, directories to search, or nothing to autodetect",
-        default=["."],
+        default=[pathlib.Path(".")],
     )
     merge.add_argument(
         "-o",
