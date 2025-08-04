@@ -19,7 +19,7 @@ def get_json_cases():
 
 
 def run_case(case: pathlib.Path, cwd: pathlib.Path, useDir: bool):
-    profiling = cwd / "profiling.json"
+    profiling = cwd / "profiling.db"
     export = cwd / "profiling.csv"
     trace = cwd / "trace.json"
     unit = "us"
