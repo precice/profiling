@@ -4,7 +4,7 @@
 
 1. _Optional_ Enable `<profiling mode="all"/>` in the preCICE configuration of your case to get the profiling information.
 2. Run the preCICE simulation.
-3. Run `precice-profiling-merge` to combine all emitted profiling files of the simulation into a single `profiling.json` file.
+3. Run `precice-profiling-merge` to combine all emitted profiling files of the simulation into a single `profiling.db` file.
 4. Analyze the solvers:
     * Use `precice-profiling-analyze` to get a breakdown of an individual solver.
     * Use `precice-profiling-trace` to visualize the data.
@@ -16,26 +16,26 @@
 ### merge
 
 Merges profiling files emitted by each rank of each participant into a single easily portable file.
-Creates a `profiling.json` by default.
+Creates a `profiling.db` by default.
 
 ### export
 
 Transforms all events to a tabular format and exports the result as a CSV format.
 The columns `Participant`, and `Rank` can be used to filter the dataset to extract individual participants or specific ranks.
 
-Reads `profiling.json` and creates `profiling.csv` by default.
+Reads `profiling.db` and creates `profiling.csv` by default.
 
 ### trace
 
 Transforms all events to the [Google Trace Format](https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU) which can be visualized by tools such as `about::tracing` in Chromium based browsers or [perfetto.dev](https://ui.perfetto.dev/).
 
-Reads `profiling.json` and creates `trace.json` by default.
+Reads `profiling.db` and creates `trace.json` by default.
 
 ### analyze
 
 Analyzes a given solver and returns a table of all timings including some statistics based on their duration.
 
-Reads `profiling.json` by default.
+Reads `profiling.db` by default.
 
 ## HPC users
 

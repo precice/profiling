@@ -4,18 +4,13 @@ import argparse
 import sys
 import pathlib
 from preciceprofiling.perfetto import open_in_perfetto
+from preciceprofiling.parsers import addInputArgument
 
 
 def makeTraceParser(add_help: bool = True):
     trace_help = "Transform profiling to the Trace Event Format."
     trace = argparse.ArgumentParser(description=trace_help, add_help=add_help)
-    trace.add_argument(
-        "profilingfile",
-        type=str,
-        nargs="?",
-        default="profiling.json",
-        help="The profiling file to process",
-    )
+    addInputArgument(trace)
     trace.add_argument(
         "-o",
         "--output",

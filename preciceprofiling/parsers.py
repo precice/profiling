@@ -13,6 +13,6 @@ def addInputArgument(parser):
         "profilingfile",
         nargs="?",
         type=str,
-        default="profiling.json",
+        default="profiling.db",
         help="The profiling file to process",
     )
