@@ -1,3 +1,6 @@
+import pathlib
+
+
 def addUnitArgument(parser):
     parser.add_argument(
         "-u",
@@ -12,7 +15,7 @@ def addInputArgument(parser):
     parser.add_argument(
         "profilingfile",
         nargs="?",
-        type=str,
-        default="profiling.db",
+        type=pathlib.Path,
+        default=pathlib.Path("profiling.db"),
         help="The profiling file to process",
     )
