@@ -6,6 +6,7 @@ import functools
 import polars as pl
 import sqlite3
 import json
+import pathlib
 
 from preciceprofiling.merge import warning, MERGED_FILE_VERSION
 
@@ -29,8 +30,11 @@ def ns_to_unit_factor(unit):
 
 
 class Run:
-    def __init__(self, filename):
+    def __init__(self, filename: pathlib.Path):
         print(f"Reading events file {filename}")
+
+        if not filename.exists():
+            raise FileNotFoundError(f"File {filename} doesn't exist")
 
         self._con = sqlite3.connect(filename)
         self._cur = self._con.cursor()
