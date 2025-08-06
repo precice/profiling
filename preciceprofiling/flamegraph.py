@@ -24,12 +24,13 @@ def runFlamegraph(ns):
 
 def flamegraphCommand(profilingfile, participant, unit="us"):
     run = Run(profilingfile)
-    df = run.toDataFrame()
 
-    assert df.select(
-        pl.col("participant").is_in([participant]).any()
-    ).item(), f"Given participant {participant} doesn't exist."
+    participants = run.participants()
+    assert (
+        participant in participants
+    ), f"Given participant {participant} unknown. Known participants are {', '.join(participants)}"
 
+    df = run.toDataFrame(participant=participant)
     print(f"Output timing are in {unit}.")
 
     def toParent(eid):
@@ -37,12 +38,12 @@ def flamegraphCommand(profilingfile, participant, unit="us"):
             return ""
         if "/" not in eid:
             return "_GLOBAL"
-        return "/".join(eid.split("/")[:-1])
+        return eid.rpartition("/")[0]
 
     def toLabel(eid):
         if eid == "_GLOBAL":
             return participant
-        return eid.split("/")[-1]
+        return eid.rpartition("/")[2]
 
     # Filter by participant
     # Convert duration to requested unit
@@ -66,6 +67,12 @@ def flamegraphCommand(profilingfile, participant, unit="us"):
         .sort("eid")
     )
 
+    hovertemplate = (
+        "<b>%{label}</b><br><i>%{id}</i><br>%{value}"
+        + unit
+        + "<br>%{percentParent:.1%} of parent<br>%{percentRoot:.1%} of total"
+    )
+
     primaryPlot = go.Icicle(
         labels=primary["label"].to_list(),
         ids=primary["eid"].to_list(),
@@ -74,7 +81,8 @@ def flamegraphCommand(profilingfile, participant, unit="us"):
         branchvalues="total",
         tiling=dict(orientation="v", flip="y"),
         root_color="lightgrey",
-        hovertemplate="<b>%{label}</b><br><i>%{id}</i><br>%{value} " + unit,
+        hovertemplate=hovertemplate,
+        textinfo="label+percent root",
     )
 
     if len(df.select("rank").unique()) == 1:
@@ -107,7 +115,8 @@ def flamegraphCommand(profilingfile, participant, unit="us"):
             branchvalues="total",
             tiling=dict(orientation="v", flip="y"),
             root_color="lightgrey",
-            hovertemplate="<b>%{label}</b><br><i>%{id}</i><br>%{value} " + unit,
+            hovertemplate=hovertemplate,
+            textinfo="label+percent root",
         ),
         row=1,
         col=2,
