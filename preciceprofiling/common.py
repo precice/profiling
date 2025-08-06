@@ -76,7 +76,7 @@ class Run:
 
         events += [
             {
-                "name": name,
+                "name": name.rpartition("/")[2],
                 "cat": "Solver" if name.startswith("solver") else "preCICE",
                 "ph": "X",  # complete event
                 "pid": pid,
