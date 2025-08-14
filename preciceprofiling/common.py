@@ -146,9 +146,9 @@ class Run:
             ("participant", pl.Utf8),
             ("rank", pl.Int32),
             ("size", pl.Int32),
-            ("eid", pl.Utf8),
-            ("ts", pl.Int64),
-            ("dur", pl.Int64),
+            ("event", pl.Utf8),
+            ("timestamp", pl.Int64),
+            ("duration", pl.Int64),
         ] + [(dn, pl.Int64) for dn in dataFields]
         df = pl.DataFrame(
             data=self.toExportList(unit, dataFields),
