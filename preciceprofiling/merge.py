@@ -152,6 +152,15 @@ def insertEvent(cur, pid, rank, name, ts, dur, data):
     )
 
 
+def getTSofLastEvent(cur, pid, rank):
+    cur.execute(
+        "SELECT max(ts + dur) FROM events WHERE pid == ? AND rank == ?", (pid, rank)
+    )
+    end = cur.fetchone()[0]
+    assert isinstance(end, int)
+    return end
+
+
 def alignEvents(con: sqlite3.Connection):
     """Aligns passed events of multiple ranks and or participants.
     All ranks of a participant align at initialization, ensured by a barrier in preCICE.
@@ -285,14 +294,13 @@ def groupEvents(
 
     # Handle leftover events in case of a truncated input file
     if active:
-        lastTS = min(map(lambda e: e["ts"] + e["dur"], completed))
+        lastTS = getTSofLastEvent(cur, pid, rank)
         for event in active.values():
-            name = event["eid"]  # This is a global id
+            name = event["eid"]
             print(f"Truncating event without end {name}")
-            begin = active[name]
-            ts = int(begin["ts"]) + initTime
-            dur = lastTS - begin["ts"]
-            data = begin.get("data")
+            ts = int(event["ts"]) + initTime
+            dur = lastTS - event["ts"]
+            data = event.get("data")
             insertEvent(cur, pid, rank, name, ts, dur, data)
 
 
