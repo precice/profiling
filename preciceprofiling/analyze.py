@@ -118,14 +118,15 @@ def runAnalyze(ns):
 
 def analyzeCommand(profilingfile, participant, event, outfile=None, unit: Literal["ns", "us", "ms", "s", "m", "h"] = "us"):
     run = Run(profilingfile)
-    df = run.toDataFrame()
 
-    participants = set(df.get_column("participant").unique())
+    participants = run.participants()
     assert (
         participant in participants
     ), f"Given participant {participant} doesn't exist. Known: " + ", ".join(
         participants
     )
+
+    df = run.toDataFrame(participant=participant)
 
     print(f"Output timing are in {unit}.")
 

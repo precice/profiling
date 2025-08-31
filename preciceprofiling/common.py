@@ -1,10 +1,12 @@
 #! /usr/bin/env python3
 
 # Import the currently fastest json library
-import orjson
 import datetime
 import functools
 import polars as pl
+import sqlite3
+import json
+import pathlib
 
 from preciceprofiling.merge import warning, MERGED_FILE_VERSION
 
@@ -29,169 +31,116 @@ def ns_to_unit_factor(unit: Literal["ns", "us", "ms", "s", "m", "h"]) -> float:
     }[unit]
 
 
-class RankData:
-    def __init__(self, data):
-        meta = data["meta"]
-        self.name = meta["name"]
-        self.rank = meta["rank"]
-        self.size = meta["size"]
-        self.unix_us = meta["unix_us"]
-        self.tinit = meta["tinit"]
-
-        self.events = data["events"]
-
-    @property
-    def type(self):
-        return "Primary (0)" if self.rank == 0 else f"Secondary ({self.rank})"
-
-    def toListOfTuples(self, eventLookup):
-        for e in self.events:
-            yield (
-                self.name,
-                self.rank,
-                eventLookup[e["eid"]],
-                int(e["ts"]),
-                int(e["dur"]),
-            )
-
-
 class Run:
-    def __init__(self, filename):
+    def __init__(self, filename: pathlib.Path):
         print(f"Reading events file {filename}")
 
-        with open(filename, "r") as f:
-            content = orjson.loads(f.read())
+        if not filename.exists():
+            raise FileNotFoundError(f"File {filename} doesn't exist")
 
-        if "file_version" not in content:
-            warning(
-                "The file doesn't contain a version (preCICE version v3.2 or earlier) and may be incompatible.",
-                filename,
-            )
-        elif (version := content["file_version"]) != MERGED_FILE_VERSION:
-            warning(
-                f"The file uses version {version}, which doesn't match the expected version {MERGED_FILE_VERSION} and may be incompatible.",
-                filename,
-            )
-
-        self.eventLookup = {int(id): name for id, name in content["eventDict"].items()}
-        self.data = content["events"]
-
-    def iterRanks(self):
-        for pranks in self.data.values():
-            for d in sorted(
-                pranks.values(), key=lambda data: int(data["meta"]["rank"])
-            ):
-                yield RankData(d)
-
-    def iterParticipant(self, name):
-        for d in self.data[name].values():
-            yield RankData(d)
-
-    def participants(self):
-        return self.data.keys()
-
-    def lookupEvent(self, id):
-        return self.eventLookup[int(id)]
+        self._con = sqlite3.connect(filename)
+        self._cur = self._con.cursor()
 
     def toTrace(self, selectRanks):
-        if selectRanks:
-            print(f'Selected ranks: {",".join(map(str, sorted(selectRanks)))}')
 
-        def filterop(rank):
-            return True if not selectRanks else rank.rank in selectRanks
-
-        pids = {name: id for id, name in enumerate(self.participants())}
-        tids = {
-            (rank.name, rank.rank): id
-            for id, rank in enumerate(filter(filterop, self.iterRanks()))
-        }
-        metaEvents = [
+        events = [
             {"name": "process_name", "ph": "M", "pid": pid, "args": {"name": name}}
-            for name, pid in pids.items()
-        ] + [
+            for pid, name in self._cur.execute("SELECT pid, name FROM participants")
+        ]
+
+        rankQuery = "SELECT DISTINCT pid, rank FROM events"
+        if selectRanks:
+            print(f'Selected ranks: {",".join(map(str,sorted(selectRanks)))}')
+            self._cur.execute(
+                f'{rankQuery} WHERE rank IN ( { ", ".join("?" * len(selectRanks)) } )',
+                tuple(selectRanks),
+            )
+        else:
+            self._cur.execute(rankQuery)
+
+        events += [
             {
                 "name": "thread_name",
                 "ph": "M",
                 "pid": pid,
-                "tid": tids[(rank.name, rank.rank)],
-                "args": {"name": rank.type},
+                "tid": rank,
+                "args": {
+                    "name": ("Primary (0)" if rank == 0 else f"Secondary ({rank})")
+                },
             }
-            for name, pid in pids.items()
-            for rank in filter(filterop, self.iterParticipant(name))
+            for pid, rank in self._cur.fetchall()
         ]
 
-        mainEvents = []
-        for rank in filter(filterop, self.iterRanks()):
-            pid, tid = pids[rank.name], tids[(rank.name, rank.rank)]
-            for e in rank.events:
-                en = self.lookupEvent(e["eid"])
-                mainEvents.append(
-                    mergedDict(
-                        {
-                            "name": en,
-                            "cat": "Solver" if en.startswith("solver") else "preCICE",
-                            "ph": "X",  # complete event
-                            "pid": pid,
-                            "tid": tid,
-                            "ts": e["ts"],
-                            "dur": e["dur"],
-                        },
-                        {} if "data" not in e else {"args": e["data"]},
-                    )
-                )
+        eventQuery = "SELECT n.name, e.pid, e.rank, e.ts, e.dur, e.data FROM events e INNER JOIN names n ON e.eid = n.eid"
+        if selectRanks:
+            self._cur.execute(
+                f'{eventQuery} WHERE rank IN ( { ", ".join("?" * len(selectRanks)) } )',
+                tuple(selectRanks),
+            )
+        else:
+            self._cur.execute(eventQuery)
 
-        return {"traceEvents": metaEvents + mainEvents}
+        events += [
+            {
+                "name": name.rpartition("/")[2],
+                "cat": "Solver" if name.startswith("solver") else "preCICE",
+                "ph": "X",  # complete event
+                "pid": pid,
+                "tid": tid,
+                "ts": ts,
+                "dur": dur,
+                "args": {} if not data else json.loads(data),
+            }
+            for name, pid, tid, ts, dur, data in self._cur
+        ]
+
+        return {"traceEvents": events}
 
     def allDataFields(self):
         return list(
             {
-                dname
-                for rank in self.iterRanks()
-                for e in rank.events
-                if "data" in e
-                for dname in e["data"].keys()
+                key
+                for row in self._cur.execute(
+                    "SELECT data FROM events WHERE data NOTNULL"
+                )
+                for key in json.loads(row[0]).keys()
             }
         )
 
     def toExportList(self, unit: Literal["ns", "us", "ms", "s", "m", "h"], dataNames):
         factor = ns_to_unit_factor(unit) * 1e3 if unit else 1
 
-        def makeData(e):
-            if "data" not in e:
+        def makeData(s):
+            if not s:
                 return tuple(None for dname in dataNames)
+            return tuple(json.loads(s).get(dname, None) for dname in dataNames)
 
-            return tuple(e["data"].get(dname, None) for dname in dataNames)
+        for p, r, s, n, ts, dur, data in self._cur.execute("SELECT * FROM full_events"):
+            yield (p, r, s, n, ts, dur * factor) + makeData(data)
 
-        for rank in self.iterRanks():
-            for e in rank.events:
-                yield (
-                    rank.name,
-                    rank.rank,
-                    rank.size,
-                    self.lookupEvent(e["eid"]),
-                    e["ts"],
-                    e["dur"] * factor,
-                ) + makeData(e)
+    def participants(self):
+        return [name for (name,) in self._cur.execute("SELECT name FROM participants")]
 
-    def toDataFrame(self):
-        import itertools
+    def events(self):
+        return [name for (name,) in self._cur.execute("SELECT name FROM names")]
 
-        schema = [
-            ("participant", pl.Utf8),
-            ("rank", pl.Int32),
-            ("eid", pl.Utf8),
-            ("ts", pl.Int64),
-            ("dur", pl.Int64),
-        ]
+    def toDataFrame(self, participant=None, event=None):
+        query = "SELECT * FROM full_events"
+        if participant and event:
+            query += f" WHERE participant = '{participant}' and event = '{event}'"
+        elif participant:
+            query += f" WHERE participant = '{participant}'"
+        elif event:
+            query += f" WHERE event = '{event}'"
 
-        columns = ["participant", "rank", "eid", "ts", "dur"]
-        df = pl.DataFrame(
-            data=itertools.chain.from_iterable(
-                map(lambda r: r.toListOfTuples(self.eventLookup), self.iterRanks())
-            ),
-            schema=schema,
-        ).with_columns([pl.col("ts").cast(pl.Datetime("us"))])
-        return df
+        return (
+            pl.read_database(
+                query=query,
+                connection=self._cur,
+            )
+            .with_columns([pl.col("ts").cast(pl.Datetime("us"))])
+            .rename({"event": "eid"})
+        )
 
     def toExportDataFrame(self, unit: Literal["ns", "us", "ms", "s", "m", "h"]):
         dataFields = self.allDataFields()
@@ -199,9 +148,9 @@ class Run:
             ("participant", pl.Utf8),
             ("rank", pl.Int32),
             ("size", pl.Int32),
-            ("eid", pl.Utf8),
-            ("ts", pl.Int64),
-            ("dur", pl.Int64),
+            ("event", pl.Utf8),
+            ("timestamp", pl.Int64),
+            ("duration", pl.Int64),
         ] + [(dn, pl.Int64) for dn in dataFields]
         df = pl.DataFrame(
             data=self.toExportList(unit, dataFields),
