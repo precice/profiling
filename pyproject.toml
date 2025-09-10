@@ -8,7 +8,7 @@ dynamic = [ "version" ]
 dependencies = [
     "typing_extensions", "orjson >= 3", "polars >= 0.19.0", "matplotlib"
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 authors = [
     { name = "The preCICE Developers",  email="info@precice.org"}
 ]
@@ -23,7 +23,7 @@ keywords = [ "preCICE", "visualization" ]
 classifiers=[
 "Development Status :: 4 - Beta",
 "Programming Language :: Python :: 3 :: Only",
-"Programming Language :: Python :: 3.8",
+"Programming Language :: Python :: 3.10",
 "Topic :: Scientific/Engineering :: Visualization",
 "Topic :: Utilities",
 ]
