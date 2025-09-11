@@ -116,7 +116,7 @@ def runAnalyze(ns):
     )
 
 
-def analyzeCommand(profilingfile, participant, event, outfile=None, unit="us"):
+def analyzeCommand(profilingfile, participant, event, outfile=None, unit: Literal["ns", "us", "ms", "s", "m", "h"] = "us"):
     run = Run(profilingfile)
 
     participants = run.participants()
