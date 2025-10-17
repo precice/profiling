@@ -18,7 +18,7 @@ Event = collections.namedtuple("Event", ["name", "ts", "dur", "data"])
 
 def eventsFor(cur, participant, rank):
     for e in cur.execute(
-        "SELECT event, ts - min(ts) OVER () as ts, dur, data FROM full_events WHERE dur > 0 AND participant == ? AND rank == ? ORDER BY ts ASC",
+        "SELECT event, ts - (SELECT min(ts) FROM events) as ts, dur, data FROM full_events WHERE dur > 0 AND participant == ? AND rank == ? ORDER BY ts ASC",
         (participant, rank),
     ):
         yield Event(*e)
@@ -58,6 +58,10 @@ def drawRank(cur, lane, p, r):
             f'<text class="event" x="{e.ts + TEXT_OFFSET}" y="{y+LANE_HEIGHT-TEXT_OFFSET}">{mainName}</text>',
             "</g>",
         ]
+        if mainName.startswith("m2n.accept") or mainName.startswith("m2n.request"):
+            content.append(
+                f'<rect class="m2n" x="{e.ts}" y="0%" width="{e.dur}" height="100%"/>'
+            )
 
     return content, len(seen) + 1
 
@@ -71,6 +75,7 @@ STYLE = """<defs>
     <![CDATA[
       rect       { stroke-width: 1; stroke-opacity: 0; }
       rect.background   { fill: rgb(255,255,255); }
+      rect.m2n          { fill: #000000; fill-opacity: 0.1; }
       rect.event        { fill: #ED762C; fill-opacity: 0.7; stroke: #000000; stroke-opacity: 1 }
       line       { stroke: rgb(64,64,64); stroke-width: 1; }
       line.sec1  { }
