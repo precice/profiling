@@ -5,13 +5,12 @@ import pathlib
 import collections
 import math
 
-
-def participants(cur):
-    return cur.execute("SELECT name FROM participants")
+LANE_HEIGHT = 20
+TEXT_OFFSET = 3
 
 
 def ranks(cur):
-    return cur.execute("SELECT DISTINCT participant, rank FROM full_events")
+    return cur.execute("SELECT DISTINCT participant, rank FROM full_events").fetchall()
 
 
 Event = collections.namedtuple("Event", ["name", "ts", "dur", "data"])
@@ -29,27 +28,38 @@ def lastEnd(cur):
     return cur.execute("SELECT max(ts+dur) - min(ts) FROM events").fetchone()[0]
 
 
-LANE_HEIGHT = 20
-
-
-def drawEvent(name, lane, x, w):
-    y = lane * LANE_HEIGHT
-    return f"""<rect x="{x}" y="{y}" width="{w}" height="{LANE_HEIGHT}" fill="#F79257" stroke="#000000">
-<title>{name}</title>
-</rect>
-<text class="name" x="{x}" y="{y+LANE_HEIGHT}">{name.rpartition("/")[-1]}</text>
-"""
-
-
 def drawRank(cur, lane, p, r):
     active = []
-    content = []
 
-    for event in eventsFor(cur, p, r):
-        content.append(drawEvent(event.name, lane, event.ts, event.dur))
-        lane += 1
+    seen = []
 
-    return content, lane
+    content = [
+        f'<line class="rank" x1="0" y1="{lane*LANE_HEIGHT}" x2="{lastEnd(cur)}" y2="{lane*LANE_HEIGHT}"/>',
+        f'<text class="rank" x="{TEXT_OFFSET}" y="{(lane+1)*LANE_HEIGHT-TEXT_OFFSET}">{p} Rank:{r}</text>',
+    ]
+
+    for e in eventsFor(cur, p, r):
+        mainName = e.name.rpartition("/")[-1]
+
+        if mainName not in seen:
+            seen.append(mainName)
+        thislane = lane + 1 + seen.index(mainName)
+
+        y = thislane * LANE_HEIGHT
+        content += [
+            "<g>",
+            f"<title>Name {e.name}",
+            f"Start {e.ts}us",
+            f"Duration {e.dur}us",
+            f"Participant {p}",
+            f"Rank {r}",
+            "</title>",
+            f'<rect class="event" x="{e.ts}" y="{y}" width="{e.dur}" height="{LANE_HEIGHT}"/>',
+            f'<text class="event" x="{e.ts + TEXT_OFFSET}" y="{y+LANE_HEIGHT-TEXT_OFFSET}">{mainName}</text>',
+            "</g>",
+        ]
+
+    return content, len(seen) + 1
 
 
 SVG_START = """<?xml version="1.0" standalone="no"?>
@@ -61,26 +71,12 @@ STYLE = """<defs>
     <![CDATA[
       rect       { stroke-width: 1; stroke-opacity: 0; }
       rect.background   { fill: rgb(255,255,255); }
-      rect.activating   { fill: rgb(255,0,0); fill-opacity: 0.7; }
-      rect.active       { fill: rgb(200,150,150); fill-opacity: 0.7; }
-      rect.deactivating { fill: rgb(150,100,100); fill-opacity: 0.7; }
-      rect.kernel       { fill: rgb(150,150,150); fill-opacity: 0.7; }
-      rect.initrd       { fill: rgb(150,150,150); fill-opacity: 0.7; }
-      rect.firmware     { fill: rgb(150,150,150); fill-opacity: 0.7; }
-      rect.loader       { fill: rgb(150,150,150); fill-opacity: 0.7; }
-      rect.userspace    { fill: rgb(150,150,150); fill-opacity: 0.7; }
-      rect.security     { fill: rgb(144,238,144); fill-opacity: 0.7; }
-      rect.generators   { fill: rgb(102,204,255); fill-opacity: 0.7; }
-      rect.unitsload    { fill: rgb( 82,184,255); fill-opacity: 0.7; }
-      rect.box   { fill: rgb(240,240,240); stroke: rgb(192,192,192); }
+      rect.event        { fill: #ED762C; fill-opacity: 0.7; stroke: #000000; stroke-opacity: 1 }
       line       { stroke: rgb(64,64,64); stroke-width: 1; }
-//    line.sec1  { }
-      line.sec5  { stroke-width: 2; }
+      line.sec1  { }
       line.sec01 { stroke: rgb(224,224,224); stroke-width: 1; }
       text       { font-family: Verdana, Helvetica; font-size: 14px; }
-      text.name  { font-family: Verdana, Helvetica; font-size: 10px; }
-      text.left  { font-family: Verdana, Helvetica; font-size: 14px; text-anchor: start; }
-      text.right { font-family: Verdana, Helvetica; font-size: 14px; text-anchor: end; }
+      text.event { font-family: Verdana, Helvetica; font-size: 10px; }
       text.sec   { font-size: 10px; }
     ]]>
    </style>
@@ -89,7 +85,6 @@ STYLE = """<defs>
 
 
 def drawTimes(w, h):
-    TEXT_OFFSET = 3
     for s in range(math.floor(w / 1000)):
         x = s * 1000
         print(
@@ -109,7 +104,8 @@ def main():
     content = []
     lane = 1  # lane 0 is for time
     for p, r in ranks(cur):
-        res, lane = drawRank(cur, lane, p, r)
+        res, lanes = drawRank(cur, lane, p, r)
+        lane += lanes
         content += res
 
     height = lane * LANE_HEIGHT
