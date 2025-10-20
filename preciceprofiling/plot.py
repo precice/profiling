@@ -43,6 +43,9 @@ def groupClassFor(name: str):
     return ""
 
 
+Rank = collections.namedtuple("Rank", ["content", "overlay", "lanes"])
+
+
 def drawRank(cur, lane, p, r):
     active = []
 
@@ -50,6 +53,7 @@ def drawRank(cur, lane, p, r):
         f'<line class="rank" x1="0" y1="{lane*LANE_HEIGHT}" x2="{lastEnd(cur)}" y2="{lane*LANE_HEIGHT}"/>',
         f'<text class="rank" x="{TEXT_OFFSET}" y="{(lane+1)*LANE_HEIGHT-TEXT_OFFSET}">{p} Rank:{r}</text>',
     ]
+    overlay = []
 
     maxDepth = 0
     for e in eventsFor(cur, p, r):
@@ -78,15 +82,15 @@ def drawRank(cur, lane, p, r):
             )
         content.append("</g>")
         if mainName.startswith("m2n.accept"):
-            content.append(
+            overlay.append(
                 f'<rect class="m2n" pointer-events="none" x="{e.ts}" y="0%" width="{e.dur}" height="100%"/>'
             )
         if mainName.startswith("m2n.request"):
-            content.append(
+            overlay.append(
                 f'<line class="m2n" pointer-events="none" x1="{e.ts+e.dur}" y1="0%" x2="{e.ts+e.dur}" y2="100%"/>'
             )
 
-    return content, maxDepth + 1
+    return Rank(content, overlay, maxDepth + 1)
 
 
 SVG_START = """<?xml version="1.0" standalone="no"?>
@@ -136,11 +140,13 @@ def main():
     cur = con.cursor()
 
     content = []
+    overlay = []
     lane = 1  # lane 0 is for time
     for p, r in ranks(cur):
-        res, lanes = drawRank(cur, lane, p, r)
+        thisContent, thisOverlay, lanes = drawRank(cur, lane, p, r)
         lane += lanes
-        content += res
+        content += thisContent
+        overlay += thisOverlay
 
     height = lane * LANE_HEIGHT
     width = lastEnd(cur)
@@ -155,6 +161,10 @@ def main():
 
     for c in content:
         print(c)
+
+    for o in overlay:
+        print(o)
+
     print("</svg>")
 
 
