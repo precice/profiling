@@ -18,7 +18,7 @@ Event = collections.namedtuple("Event", ["name", "ts", "dur", "data"])
 
 def eventsFor(cur, participant, rank):
     for e in cur.execute(
-        "SELECT event, ts - (SELECT min(ts) FROM events) as ts, dur, data FROM full_events WHERE dur > 0 AND participant == ? AND rank == ? ORDER BY ts ASC",
+        "SELECT event, ts - (SELECT min(ts) FROM events) as ts, dur, data FROM full_events WHERE dur > 0 AND event <> '_GLOBAL' AND participant == ? AND rank == ? ORDER BY ts ASC",
         (participant, rank),
     ):
         yield Event(*e)
@@ -31,19 +31,20 @@ def lastEnd(cur):
 def drawRank(cur, lane, p, r):
     active = []
 
-    seen = []
-
     content = [
         f'<line class="rank" x1="0" y1="{lane*LANE_HEIGHT}" x2="{lastEnd(cur)}" y2="{lane*LANE_HEIGHT}"/>',
         f'<text class="rank" x="{TEXT_OFFSET}" y="{(lane+1)*LANE_HEIGHT-TEXT_OFFSET}">{p} Rank:{r}</text>',
     ]
 
+    maxDepth = 0
     for e in eventsFor(cur, p, r):
         mainName = e.name.rpartition("/")[-1]
 
-        if mainName not in seen:
-            seen.append(mainName)
-        thislane = lane + 1 + seen.index(mainName)
+        # pop elements that have stopped by now
+        active = [a for a in active if (a.ts + a.dur) > e.ts]
+        thislane = lane + 1 + len(active)
+        maxDepth = max(maxDepth, 1 + len(active))
+        active.append(e)
 
         y = thislane * LANE_HEIGHT
         content += [
@@ -55,15 +56,18 @@ def drawRank(cur, lane, p, r):
             f"Rank {r}",
             "</title>",
             f'<rect class="event" x="{e.ts}" y="{y}" width="{e.dur}" height="{LANE_HEIGHT}"/>',
-            f'<text class="event" x="{e.ts + TEXT_OFFSET}" y="{y+LANE_HEIGHT-TEXT_OFFSET}">{mainName}</text>',
-            "</g>",
         ]
+        if e.dur >= 80:
+            content.append(
+                f'<text class="event" x="{e.ts + TEXT_OFFSET}" y="{y+LANE_HEIGHT-TEXT_OFFSET}">{mainName}</text>'
+            )
+        content.append("</g>")
         if mainName.startswith("m2n.accept") or mainName.startswith("m2n.request"):
             content.append(
                 f'<rect class="m2n" x="{e.ts}" y="0%" width="{e.dur}" height="100%"/>'
             )
 
-    return content, len(seen) + 1
+    return content, maxDepth + 1
 
 
 SVG_START = """<?xml version="1.0" standalone="no"?>
@@ -77,6 +81,7 @@ STYLE = """<defs>
       rect.background   { fill: rgb(255,255,255); }
       rect.m2n          { fill: #000000; fill-opacity: 0.1; }
       rect.event        { fill: #ED762C; fill-opacity: 0.7; stroke: #000000; stroke-opacity: 1 }
+      rect.event:hover  { stroke-width: 2; }
       line       { stroke: rgb(64,64,64); stroke-width: 1; }
       line.sec1  { }
       line.sec01 { stroke: rgb(224,224,224); stroke-width: 1; }
