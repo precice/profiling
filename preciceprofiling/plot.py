@@ -28,6 +28,19 @@ def lastEnd(cur):
     return cur.execute("SELECT max(ts+dur) - min(ts) FROM events").fetchone()[0]
 
 
+def groupClassFor(name: str):
+    lname = name.lower()
+    if lname.startswith("solver."):
+        return "solver"
+    if "mapping" in lname:
+        return "mapping"
+    if "send" in lname:
+        return "send"
+    if "receive" in lname:
+        return "receive"
+    return ""
+
+
 def drawRank(cur, lane, p, r):
     active = []
 
@@ -55,16 +68,16 @@ def drawRank(cur, lane, p, r):
             f"Participant {p}",
             f"Rank {r}",
             "</title>",
-            f'<rect class="event" x="{e.ts}" y="{y}" width="{e.dur}" height="{LANE_HEIGHT}"/>',
+            f'<rect class="event {groupClassFor(e.name)}" x="{e.ts}" y="{y}" width="{e.dur}" height="{LANE_HEIGHT}"/>',
         ]
         if e.dur >= 80:
             content.append(
-                f'<text class="event" x="{e.ts + TEXT_OFFSET}" y="{y+LANE_HEIGHT-TEXT_OFFSET}">{mainName}</text>'
+                f'<text class="event" pointer-events="none" x="{e.ts + TEXT_OFFSET}" y="{y+LANE_HEIGHT-TEXT_OFFSET}">{mainName}</text>'
             )
         content.append("</g>")
         if mainName.startswith("m2n.accept") or mainName.startswith("m2n.request"):
             content.append(
-                f'<rect class="m2n" x="{e.ts}" y="0%" width="{e.dur}" height="100%"/>'
+                f'<rect class="m2n" pointer-events="none" x="{e.ts}" y="0%" width="{e.dur}" height="100%"/>'
             )
 
     return content, maxDepth + 1
@@ -79,9 +92,13 @@ STYLE = """<defs>
     <![CDATA[
       rect       { stroke-width: 1; stroke-opacity: 0; }
       rect.background   { fill: rgb(255,255,255); }
-      rect.m2n          { fill: #000000; fill-opacity: 0.1; }
       rect.event        { fill: #ED762C; fill-opacity: 0.7; stroke: #000000; stroke-opacity: 1 }
       rect.event:hover  { stroke-width: 2; }
+      rect.solver       { fill: #3030ff; }
+      rect.mapping      { fill: #30ff30; }
+      rect.send         { fill: #ffff30; }
+      rect.receive      { fill: #ff3030; }
+      rect.m2n          { fill: #000000; fill-opacity: 0.1; }
       line       { stroke: rgb(64,64,64); stroke-width: 1; }
       line.sec1  { }
       line.sec01 { stroke: rgb(224,224,224); stroke-width: 1; }
