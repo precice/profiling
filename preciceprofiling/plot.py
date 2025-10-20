@@ -46,12 +46,12 @@ def groupClassFor(name: str):
 Rank = collections.namedtuple("Rank", ["content", "overlay", "lanes"])
 
 
-def drawRank(cur, lane, p, r):
+def drawRank(cur, p, r):
     active = []
 
     content = [
-        f'<line class="rank" x1="0" y1="{lane*LANE_HEIGHT}" x2="{lastEnd(cur)}" y2="{lane*LANE_HEIGHT}"/>',
-        f'<text class="rank" x="{TEXT_OFFSET}" y="{(lane+1)*LANE_HEIGHT-TEXT_OFFSET}">{p} Rank:{r}</text>',
+        f'<line class="rank" x1="0" y1="0" x2="{lastEnd(cur)}" y2="0"/>',
+        f'<text class="rank" x="{TEXT_OFFSET}" y="{LANE_HEIGHT-TEXT_OFFSET}">{p} Rank:{r}</text>',
     ]
     overlay = []
 
@@ -61,7 +61,7 @@ def drawRank(cur, lane, p, r):
 
         # pop elements that have stopped by now
         active = [a for a in active if (a.ts + a.dur) > e.ts]
-        thislane = lane + 1 + len(active)
+        thislane = 1 + len(active)
         maxDepth = max(maxDepth, 1 + len(active))
         active.append(e)
 
@@ -143,10 +143,12 @@ def main():
     overlay = []
     lane = 1  # lane 0 is for time
     for p, r in ranks(cur):
-        thisContent, thisOverlay, lanes = drawRank(cur, lane, p, r)
-        lane += lanes
+        thisContent, thisOverlay, lanes = drawRank(cur, p, r)
+        content.append(f'<g transform="translate(0 {lane*LANE_HEIGHT})">')
         content += thisContent
+        content.append("</g>")
         overlay += thisOverlay
+        lane += lanes
 
     height = lane * LANE_HEIGHT
     width = lastEnd(cur)
