@@ -4,6 +4,7 @@ import sqlite3
 import pathlib
 import collections
 import math
+import functools
 
 LANE_HEIGHT = 20
 TEXT_OFFSET = 3
@@ -24,6 +25,7 @@ def eventsFor(cur, participant, rank):
         yield Event(*e)
 
 
+@functools.cache
 def lastEnd(cur):
     return cur.execute("SELECT max(ts+dur) - min(ts) FROM events").fetchone()[0]
 
@@ -75,9 +77,13 @@ def drawRank(cur, lane, p, r):
                 f'<text class="event" pointer-events="none" x="{e.ts + TEXT_OFFSET}" y="{y+LANE_HEIGHT-TEXT_OFFSET}">{mainName}</text>'
             )
         content.append("</g>")
-        if mainName.startswith("m2n.accept") or mainName.startswith("m2n.request"):
+        if mainName.startswith("m2n.accept"):
             content.append(
                 f'<rect class="m2n" pointer-events="none" x="{e.ts}" y="0%" width="{e.dur}" height="100%"/>'
+            )
+        if mainName.startswith("m2n.request"):
+            content.append(
+                f'<line class="m2n" pointer-events="none" x1="{e.ts+e.dur}" y1="0%" x2="{e.ts+e.dur}" y2="100%"/>'
             )
 
     return content, maxDepth + 1
@@ -102,6 +108,7 @@ STYLE = """<defs>
       line       { stroke: rgb(64,64,64); stroke-width: 1; }
       line.sec1  { }
       line.sec01 { stroke: rgb(224,224,224); stroke-width: 1; }
+      line.m2n   { stroke: #000000; stroke-opacity: 1; stroke-width: 2 }
       text       { font-family: Verdana, Helvetica; font-size: 14px; }
       text.event { font-family: Verdana, Helvetica; font-size: 10px; }
       text.sec   { font-size: 10px; }
