@@ -180,6 +180,17 @@ class Run:
             ):
                 yield Event(*e)
 
+        def groupFor(name):
+            if name == "solver.advance" or name == "solver.initialize":
+                return 1
+            if "m2n.acceptPrimary" in name or "m2n.requestPrimary" in name:
+                return 2
+            if "m2n.acceptSecondary" in name or "m2n.requestSecondary" in name:
+                return 3
+            if "mapping" in name:
+                return 4
+            return None
+
         TPS_ID = 2025
 
         builder = TraceProtoBuilder()
@@ -237,6 +248,8 @@ class Run:
                 pkt.timestamp = e.ts
                 pkt.track_event.type = TrackEvent.TYPE_SLICE_BEGIN
                 pkt.track_event.track_uuid = u
+                if group := groupFor(e.name):
+                    pkt.track_event.correlation_id = group
                 pkt.trusted_packet_sequence_id = TPS_ID
                 name = e.name.rpartition("/")[-1]
                 if name in seen:
