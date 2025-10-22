@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name="precice-profiling"
 dynamic = [ "version" ]
 dependencies = [
-    "typing_extensions", "orjson >= 3", "polars >= 0.19.0", "matplotlib"
+    "typing_extensions", "orjson >= 3", "polars >= 0.19.0", "matplotlib", "perfetto"
 ]
 requires-python = ">=3.10"
 authors = [
@@ -40,6 +40,7 @@ precice-profiling-analyze = "preciceprofiling.analyze:main"
 precice-profiling-trace = "preciceprofiling.trace:main"
 precice-profiling-export = "preciceprofiling.export:main"
 precice-profiling-histogram = "preciceprofiling.histogram:main"
+precice-profiling-pftrace = "preciceprofiling.pftrace:main"
 
 [tool.setuptools]
 packages=["preciceprofiling"]
