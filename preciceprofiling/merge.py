@@ -125,6 +125,11 @@ def createProfilingDB(con: sqlite3.Connection) -> sqlite3.Cursor:
     return cur
 
 
+def createIndices(con: sqlite3.Connection):
+    con.execute("CREATE INDEX identity ON events (pid, rank)")
+    con.execute("CREATE INDEX tsorder ON events (ts ASC)")
+
+
 @cache
 def addOrFetchParticipant(cur: sqlite3.Cursor, name: str, size: int):
     cur.execute(
@@ -471,6 +476,7 @@ def mergeCommand(files, outfile, align):
 
     # commit and tidy up
     con.commit()
+    createIndices(con)
     con.execute("VACUUM")
     con.close()
 
