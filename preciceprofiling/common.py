@@ -7,6 +7,7 @@ import polars as pl
 import sqlite3
 import json
 import pathlib
+import collections
 
 from preciceprofiling.merge import warning, MERGED_FILE_VERSION
 
@@ -119,6 +120,11 @@ class Run:
     def participants(self):
         return [name for (name,) in self._cur.execute("SELECT name FROM participants")]
 
+    def ranks(self):
+        return self._cur.execute(
+            "SELECT DISTINCT participant, rank FROM full_events"
+        ).fetchall()
+
     def events(self):
         return [name for (name,) in self._cur.execute("SELECT name FROM names")]
 
@@ -155,3 +161,100 @@ class Run:
             schema=schema,
         )
         return df
+
+    def toPFTrace(self):
+        import uuid
+        from perfetto.trace_builder.proto_builder import TraceProtoBuilder
+        from perfetto.protos.perfetto.trace.perfetto_trace_pb2 import (
+            TrackEvent,
+            TrackDescriptor,
+            TracePacket,
+        )
+
+        Event = collections.namedtuple("Event", ["name", "ts", "dur", "data"])
+
+        def eventsFor(participant, rank):
+            for e in self._cur.execute(
+                "SELECT event, (ts - (SELECT min(ts) FROM events))*1000 as ts , dur*1000, data FROM full_events WHERE dur > 0 AND event <> '_GLOBAL' AND participant == ? AND rank == ? ORDER BY ts ASC",
+                (participant, rank),
+            ):
+                yield Event(*e)
+
+        TPS_ID = 2025
+
+        builder = TraceProtoBuilder()
+
+        participants = {
+            p: uuid.uuid4().int & ((1 << 63) - 1) for p in self.participants()
+        }
+
+        for p, u in participants.items():
+            pkt = builder.add_packet()
+            pkt.track_descriptor.uuid = u
+            pkt.track_descriptor.name = p
+            pkt.track_descriptor.child_ordering = TrackDescriptor.EXPLICIT
+            pkt.trusted_packet_sequence_id = TPS_ID
+
+        ranks = [
+            (p, r, i)
+            for i, (p, r) in enumerate(
+                self.ranks(),
+                start=10,
+            )
+        ]
+
+        for p, r, u in ranks:
+            pkt = builder.add_packet()
+            pkt.track_descriptor.uuid = u
+            pkt.track_descriptor.name = f"Rank {r}"
+            pkt.track_descriptor.parent_uuid = participants[p]
+            pkt.track_descriptor.sibling_order_rank = r
+            pkt.trusted_packet_sequence_id = TPS_ID
+            pkt.sequence_flags = TracePacket.SEQ_INCREMENTAL_STATE_CLEARED
+
+        seen = {}
+
+        for p, r, u in ranks:
+            active = []
+            for e in eventsFor(p, r):
+
+                # end past events
+                for a in active:
+                    if (a.ts + a.dur) <= e.ts:
+                        pkt = builder.add_packet()
+                        pkt.timestamp = a.ts + a.dur
+                        pkt.track_event.type = TrackEvent.TYPE_SLICE_END
+                        pkt.track_event.track_uuid = u
+                        pkt.trusted_packet_sequence_id = TPS_ID
+                        pkt.sequence_flags = TracePacket.SEQ_NEEDS_INCREMENTAL_STATE
+
+                # discard inactive
+                active = [a for a in active if (a.ts + a.dur) > e.ts]
+                active.append(e)
+
+                # add new event
+                pkt = builder.add_packet()
+                pkt.timestamp = e.ts
+                pkt.track_event.type = TrackEvent.TYPE_SLICE_BEGIN
+                pkt.track_event.track_uuid = u
+                pkt.trusted_packet_sequence_id = TPS_ID
+                name = e.name.rpartition("/")[-1]
+                if name in seen:
+                    pkt.track_event.name_iid = seen[name]
+                else:
+                    pkt.track_event.name = name
+                    entry = pkt.interned_data.event_names.add()
+                    entry.iid = seen[name] = len(seen) + 1
+                    entry.name = name
+                pkt.sequence_flags = TracePacket.SEQ_NEEDS_INCREMENTAL_STATE
+
+            # end leftover events
+            for a in active:
+                pkt = builder.add_packet()
+                pkt.timestamp = a.ts + a.dur
+                pkt.track_event.type = TrackEvent.TYPE_SLICE_END
+                pkt.track_event.track_uuid = u
+                pkt.trusted_packet_sequence_id = TPS_ID
+                pkt.sequence_flags = TracePacket.SEQ_NEEDS_INCREMENTAL_STATE
+
+        return builder.serialize()
