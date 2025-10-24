@@ -41,6 +41,7 @@ precice-profiling-trace = "preciceprofiling.trace:main"
 precice-profiling-export = "preciceprofiling.export:main"
 precice-profiling-histogram = "preciceprofiling.histogram:main"
 precice-profiling-pftrace = "preciceprofiling.pftrace:main"
+precice-profiling-view = "preciceprofiling.view:main"
 
 [tool.setuptools]
 packages=["preciceprofiling"]
