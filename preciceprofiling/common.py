@@ -259,6 +259,13 @@ class Run:
                     entry.name = name
                 pkt.sequence_flags = TracePacket.SEQ_NEEDS_INCREMENTAL_STATE
 
+                # add data
+                if e.data:
+                    for key, value in json.loads(e.data).items():
+                        annotation = pkt.track_event.debug_annotations.add()
+                        annotation.name = key
+                        annotation.int_value = value
+
             # end leftover events
             for a in active:
                 pkt = builder.add_packet()
