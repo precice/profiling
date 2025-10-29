@@ -122,7 +122,7 @@ class Run:
 
     def ranks(self):
         return self._cur.execute(
-            "SELECT DISTINCT participant, rank FROM full_events"
+            "SELECT DISTINCT participant, rank FROM full_events ORDER BY participant ASC, rank ASC"
         ).fetchall()
 
     def events(self):
@@ -195,31 +195,29 @@ class Run:
 
         builder = TraceProtoBuilder()
 
-        participants = {
-            p: uuid.uuid4().int & ((1 << 63) - 1) for p in self.participants()
-        }
+        participants = {name: pid for pid, name in enumerate(self.participants())}
 
-        for p, u in participants.items():
+        for name, pid in participants.items():
             pkt = builder.add_packet()
-            pkt.track_descriptor.uuid = u
-            pkt.track_descriptor.name = p
-            pkt.track_descriptor.child_ordering = TrackDescriptor.EXPLICIT
+            pkt.track_descriptor.uuid = uuid.uuid4().int & ((1 << 63) - 1)
+            pkt.track_descriptor.process.pid = pid
+            pkt.track_descriptor.process.process_name = name
             pkt.trusted_packet_sequence_id = TPS_ID
 
         ranks = [
             (p, r, i)
             for i, (p, r) in enumerate(
                 self.ranks(),
-                start=10,
+                start=10,  # 0 is reserved
             )
         ]
 
         for p, r, u in ranks:
             pkt = builder.add_packet()
             pkt.track_descriptor.uuid = u
-            pkt.track_descriptor.name = f"Rank {r}"
-            pkt.track_descriptor.parent_uuid = participants[p]
-            pkt.track_descriptor.sibling_order_rank = r
+            pkt.track_descriptor.thread.thread_name = f"Rank {r}"
+            pkt.track_descriptor.thread.pid = participants[p]
+            pkt.track_descriptor.thread.tid = u
             pkt.trusted_packet_sequence_id = TPS_ID
             pkt.sequence_flags = TracePacket.SEQ_INCREMENTAL_STATE_CLEARED
 
