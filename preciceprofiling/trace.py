@@ -6,8 +6,10 @@ import pathlib
 from preciceprofiling.perfetto import open_in_perfetto
 from preciceprofiling.parsers import addInputArgument
 
+from typing import Literal
 
-def makeTraceParser(add_help: bool = True):
+
+def makeTraceParser(add_help: bool = True) -> argparse.ArgumentParser:
     trace_help = "Transform profiling to the Trace Event Format."
     trace = argparse.ArgumentParser(description=trace_help, add_help=add_help)
     addInputArgument(trace)
@@ -33,11 +35,11 @@ def makeTraceParser(add_help: bool = True):
     return trace
 
 
-def runTrace(ns):
+def runTrace(ns) -> Literal[0]:
     return traceCommand(ns.profilingfile, ns.output, ns.rank, ns.limit, ns.web)
 
 
-def traceCommand(profilingfile, outfile, rankfilter, limit, web):
+def traceCommand(profilingfile, outfile, rankfilter, limit, web) -> Literal[0]:
     run = Run(profilingfile)
     selection = (
         set()
@@ -53,7 +55,7 @@ def traceCommand(profilingfile, outfile, rankfilter, limit, web):
     return 0
 
 
-def main():
+def main() -> Literal[0]:
     parser = makeTraceParser()
     ns = parser.parse_args()
     return runTrace(ns)
