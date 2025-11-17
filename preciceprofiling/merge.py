@@ -210,6 +210,8 @@ def alignEvents(con: sqlite3.Connection):
             INNER JOIN participants reqpart ON req.pid = reqpart.pid
             WHERE accname.name GLOB '*m2n.acceptPrimaryRankConnection.*'
             AND reqname.name GLOB '*m2n.requestPrimaryRankConnection.' || accpart.name
+            AND NOT accname.name GLOB '*.sync'
+            AND NOT reqname.name GLOB '*.sync'
             AND acc.rank = 0
             AND req.rank = 0
             """
