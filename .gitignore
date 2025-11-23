@@ -16,4 +16,5 @@
 # output files
 profiling.db
 profiling.csv
+profiling.pftrace
 trace.json

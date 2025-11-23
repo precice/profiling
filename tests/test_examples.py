@@ -7,6 +7,7 @@ from preciceprofiling.merge import mergeCommand
 from preciceprofiling.analyze import analyzeCommand
 from preciceprofiling.export import exportCommand
 from preciceprofiling.trace import traceCommand
+from preciceprofiling.pftrace import pftraceCommand
 
 
 def get_cases():
@@ -22,6 +23,7 @@ def run_case(case: pathlib.Path, cwd: pathlib.Path, useDir: bool):
     profiling = cwd / "profiling.db"
     export = cwd / "profiling.csv"
     trace = cwd / "trace.json"
+    pftrace = cwd / "profiling.pftrace"
     unit = "us"
 
     mergeInputs = (
@@ -41,6 +43,10 @@ def run_case(case: pathlib.Path, cwd: pathlib.Path, useDir: bool):
     print("--- Trace")
     assert traceCommand(profiling, trace, unit, None, False) == 0
     assert trace.exists()
+
+    print("--- Perfetto trace")
+    assert pftraceCommand(profiling, pftrace) == 0
+    assert pftrace.exists()
 
     participants = (
         pl.read_csv(cwd / "profiling.csv").get_column("participant").unique().to_list()

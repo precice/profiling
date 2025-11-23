@@ -127,6 +127,11 @@ def createProfilingDB(con: sqlite3.Connection) -> sqlite3.Cursor:
     return cur
 
 
+def createIndices(con: sqlite3.Connection):
+    con.execute("CREATE INDEX identity ON events (pid, rank)")
+    con.execute("CREATE INDEX tsorder ON events (ts ASC)")
+
+
 @cache
 def addOrFetchParticipant(cur: sqlite3.Cursor, name: str, size: int):
     cur.execute(
@@ -207,6 +212,8 @@ def alignEvents(con: sqlite3.Connection):
             INNER JOIN participants reqpart ON req.pid = reqpart.pid
             WHERE accname.name GLOB '*m2n.acceptPrimaryRankConnection.*'
             AND reqname.name GLOB '*m2n.requestPrimaryRankConnection.' || accpart.name
+            AND NOT accname.name GLOB '*.sync'
+            AND NOT reqname.name GLOB '*.sync'
             AND acc.rank = 0
             AND req.rank = 0
             """
@@ -463,18 +470,25 @@ def mergeCommand(files, outfile, align: bool) -> Literal[0]:
     resolved = detectFiles(files)
     sanitized = sanitizeFiles(resolved)
 
+    # Remove the old DB if present
     outfile.unlink(missing_ok=True)
-    con = sqlite3.connect(outfile)
+
+    # We create the db in-memory and safe it to disk later (10% faster)
+    con = sqlite3.connect(":memory:")
 
     loadProfilingOutputs(con, sanitized)
 
     if align:
         alignEvents(con)
 
-    # commit and tidy up
+    createIndices(con)
     con.commit()
-    con.execute("VACUUM")
+
+    # Backup the in-memory DB to a blank DB on disk
+    filedb = sqlite3.connect(outfile)
+    con.backup(filedb)
     con.close()
+    filedb.close()
 
     return 0
 
