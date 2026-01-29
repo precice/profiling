@@ -148,6 +148,7 @@ class Run:
 
     def toExportDataFrame(self, unit):
         dataFields = self.allDataFields()
+        print(dataFields)
         schema = [
             ("participant", pl.Utf8),
             ("rank", pl.Int32),
