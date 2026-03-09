@@ -86,3 +86,24 @@ def test_truncated_case(case: pathlib.Path, useDir: bool):
         cwd = pathlib.Path(tmp)
         truncate_case_files(case, cwd)
         run_case(cwd, cwd, useDir)
+
+
+def test_analyze_all_participants():
+    """analyze with no participant should analyze all participants"""
+    case = pathlib.Path(__file__).parent / "cases" / "fiveparticipants-json"
+    with tempfile.TemporaryDirectory() as tmp:
+        cwd = pathlib.Path(tmp)
+        profiling = cwd / "profiling.db"
+        assert mergeCommand([case], profiling, True) == 0
+        assert analyzeCommand(profiling, None, "advance", None, "us") == 0
+
+
+def test_analyze_no_participant_with_outfile_errors():
+    """analyze with no participant but --output should return error"""
+    case = pathlib.Path(__file__).parent / "cases" / "fiveparticipants-json"
+    with tempfile.TemporaryDirectory() as tmp:
+        cwd = pathlib.Path(tmp)
+        profiling = cwd / "profiling.db"
+        assert mergeCommand([case], profiling, True) == 0
+        result = analyzeCommand(profiling, None, "advance", cwd / "out.csv", "us")
+        assert result == 1

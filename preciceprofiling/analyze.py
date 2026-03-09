@@ -11,7 +11,13 @@ def makeAnalyzeParser(add_help: bool = True):
     Parallel solvers show events of the primary rank next to the secondary ranks spending the least and most time in advance of preCICE.
     """
     analyze = argparse.ArgumentParser(description=analyze_help, add_help=add_help)
-    analyze.add_argument("participant", type=str, help="The participant to analyze")
+    analyze.add_argument(
+        "participant",
+        type=str,
+        nargs="?",
+        default=None,
+        help="The participant to analyze. If omitted, all participants are analyzed.",
+    )
     addInputArgument(analyze)
     addUnitArgument(analyze)
     analyze.add_argument(
@@ -116,26 +122,10 @@ def runAnalyze(ns):
     )
 
 
-def analyzeCommand(profilingfile, participant, event, outfile=None, unit="us"):
-    # Translate display name "total" back to internal name "_GLOBAL"
-    if event == "total":
-        event = "_GLOBAL"
-
-    run = Run(profilingfile)
-
-    participants = run.participants()
-    assert (
-        participant in participants
-    ), f"Given participant {participant} doesn't exist. Known: " + ", ".join(
-        participants
-    )
-
+def computeAnalysis(run, participant, event, unit="us"):
+    """Compute the analysis DataFrame for a single participant."""
     df = run.toDataFrame(participant=participant)
 
-    print(f"Output timing are in {unit}.")
-
-    # Filter by participant
-    # Convert duration to requested unit
     dur_factor = 1000 * ns_to_unit_factor(unit)
     df = (
         df.filter(pl.col("participant") == participant)
@@ -213,6 +203,39 @@ def analyzeCommand(profilingfile, participant, event, outfile=None, unit="us"):
             .collect()
         )
 
+    return joined
+
+
+def analyzeCommand(profilingfile, participant, event, outfile=None, unit="us"):
+    # Translate display name "total" back to internal name "_GLOBAL"
+    if event == "total":
+        event = "_GLOBAL"
+
+    run = Run(profilingfile)
+    all_participants = run.participants()
+
+    assert (
+        participant is None or participant in all_participants
+    ), f"Given participant {participant} doesn't exist. Known: " + ", ".join(
+        all_participants
+    )
+
+    print(f"Output timings are in {unit}.")
+
+    if participant is None:
+        if outfile is not None:
+            print(
+                "Error: --output requires a specific participant. "
+                "Use `analyze <participant> --output <file>`.",
+                file=sys.stderr,
+            )
+            return 1
+        for p in all_participants:
+            print(f"\n=== Participant: {p} ===")
+            printWide(computeAnalysis(run, p, event, unit))
+        return 0
+
+    joined = computeAnalysis(run, participant, event, unit)
     printWide(joined)
 
     if outfile:
