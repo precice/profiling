@@ -148,6 +148,15 @@ class Run:
 
     def toExportDataFrame(self, unit):
         dataFields = self.allDataFields()
+
+        for dataField in dataFields:
+            assert not contains(
+                ["participant", "rank", "size", "event", "timestamp", "duration"],
+                dataField,
+            ), (
+                f"Event data must not be named '{dataField}', because it collides with a built-in name"
+            )
+
         schema = [
             ("participant", pl.Utf8),
             ("rank", pl.Int32),
