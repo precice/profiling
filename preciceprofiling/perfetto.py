@@ -2,28 +2,34 @@ from http.server import BaseHTTPRequestHandler
 from socketserver import TCPServer
 from webbrowser import open_new_tab
 import pathlib
+import json
+import urllib.parse
 
 
-def open_in_perfetto(tracefile: pathlib.Path):
+def open_in_perfetto(tracefile: pathlib.Path, startupCommands=[]):
     print(f"Opening {str(tracefile)} on ui.perfetto.dev")
-    content = tracefile.read_text()
+
+    content = tracefile.read_bytes()
+    contentType = (
+        "text/json" if tracefile.suffix == ".json" else "application/x-protobuf"
+    )
 
     PORT = 9001
     ORIGIN = "https://ui.perfetto.dev"
 
     class TraceHandler(BaseHTTPRequestHandler):
         def do_GET(self):
-            if self.path != "/trace.json":
+            if self.path != "/trace/":
                 self.send_error(405)
 
             self.server.trace_served = True
             self.send_response(200)
             self.send_header("Access-Control-Allow-Origin", ORIGIN)
             self.send_header("Cache-Control", "no-cache")
-            self.send_header("Content-type", "text/json")
+            self.send_header("Content-type", contentType)
             self.send_header("Content-length", str(len(content)))
             self.end_headers()
-            self.wfile.write(content.encode())
+            self.wfile.write(content)
 
         def do_POST(self):
             self.send_error(405)
@@ -35,7 +41,12 @@ def open_in_perfetto(tracefile: pathlib.Path):
 
     TCPServer.allow_reuse_address = True
     with TCPServer(("127.0.0.1", PORT), TraceHandler) as httpd:
-        address = f"{ORIGIN}/#!/?url=http://127.0.0.1:{PORT}/trace.json"
+        address = f"{ORIGIN}/#!/?url=http://127.0.0.1:{PORT}/trace/"
+
+        if startupCommands:
+            encoded = urllib.parse.quote(json.dumps(startupCommands))
+            address += f"&startupCommands={encoded}"
+
         open_new_tab(address)
 
         httpd.trace_served = False
